@@ -33,9 +33,9 @@
   "dependencies": {
     "@imqueue/core": "^1.13.0",
     "@imqueue/js": "^1.2.1",
-    "@imqueue/rpc": "^1.15.0",
     "@types/bluebird": "^3.5.42",
-    "@types/validator": "^13.11.6",
+    "@imqueue/rpc": "^1.16.0",
+    "@types/validator": "^13.7.17",
     "bluebird": "^3.7.2",
     "chalk": "^4.1.2",
     "dotenv": "^16.3.1",
