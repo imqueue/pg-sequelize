@@ -1,10 +1,8 @@
 # @imqueue/sequelize
 
-[![Build Status](https://travis-ci.org/imqueue/sequelize.svg?branch=master)](https://travis-ci.org/imqueue/sequelize)
-[![David](https://img.shields.io/david/imqueue/sequelize.svg)](https://david-dm.org/imqueue/sequelize)
-[![David](https://img.shields.io/david/dev/imqueue/sequelize.svg)](https://david-dm.org/imqueue/sequelize?type=dev)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/imqueue/sequelize/build.yml)](https://github.com/imqueue/sequelize)
 [![Known Vulnerabilities](https://snyk.io/test/github/imqueue/sequelize/badge.svg?targetFile=package.json)](https://snyk.io/test/github/imqueue/sequelize?targetFile=package.json)
-[![License](https://img.shields.io/badge/license-ISC-blue.svg)](https://rawgit.com/imqueue/sequelize/master/LICENSE)
+[![License](https://img.shields.io/badge/license-GPL-blue.svg)](https://rawgit.com/imqueue/core/master/LICENSE)
 
 Sequelize ORM refines for @imqueue
 
@@ -46,3 +44,8 @@ const sequelize = database({
 
 
 ~~~
+
+## License
+
+This project is licensed under the GNU General Public License v3.0.
+See the [LICENSE](LICENSE)
