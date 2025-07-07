@@ -22,16 +22,18 @@
  * <support@imqueue.com> to get commercial licensing options.
  */
 import { js, object } from '@imqueue/js';
-import { CountOptions, Includeable, Transaction } from 'sequelize';
 import {
     Association,
+    CountOptions,
     FindOptions,
+    Includeable,
     IncludeOptions,
+    ModelAttributeColumnReferencesOptions,
     ModelAttributes,
     Op,
+    Transaction,
 } from 'sequelize';
 import { Model } from 'sequelize-typescript';
-import { Literal } from 'sequelize/types/lib/utils';
 import { database } from '..';
 import { BaseModel, SaveOptions, Sequelize } from '../BaseModel';
 import {
@@ -42,6 +44,7 @@ import {
     OrderDirection,
     PaginationInput,
 } from '../types';
+import { Literal } from 'sequelize/types/utils';
 
 export namespace query {
     import isObject = js.isObject;
@@ -131,15 +134,17 @@ export namespace query {
      * @return {any}
      */
     export const pureData: PureDataFunction = <T, M extends BaseModel<M>>(
-        model: typeof BaseModel,
+        model: M,
         input: T | T[],
         attributes?: string[],
     ) => {
-        attributes = attributes || Object.keys(model.rawAttributes || {});
+        attributes = attributes || Object.keys(
+            (model as unknown as typeof BaseModel<any>).rawAttributes || {},
+        );
 
         if (isArray(input)) {
             return (input as T[]).map(inputItem => pureData(
-                model,
+                model as any,
                 inputItem,
                 attributes as string[],
             ));
@@ -478,7 +483,8 @@ export namespace query {
 
         const map: ForeignKeyMap = Object.keys(model.rawAttributes)
             .reduce((fkMap, name) => {
-                const relation = model.rawAttributes[name].references;
+                const relation = model.rawAttributes[name].references as
+                    ModelAttributeColumnReferencesOptions;
 
                 if (relation &&
                     relation.model === parent.name && relation.key
@@ -1050,8 +1056,12 @@ export namespace query {
         path: typeof Model[],
     ): IncludeOptions | null {
         const currentModel = path.shift();
+        const includes = Array.isArray(queryOptions.include)
+            ? queryOptions.include
+            : [queryOptions.include]
+        ;
 
-        for (const include of (queryOptions.include || [])) {
+        for (const include of includes) {
             const model = (include as IncludeOptions).model;
 
             // noinspection JSIncompatibleTypesComparison
@@ -1161,7 +1171,16 @@ export namespace query {
             }
 
             if (!found) {
-                queryOptions.include.push({ model, ...fields } as Includeable);
+                const addedInclude: Includeable = { model, ...fields };
+
+                if (Array.isArray(queryOptions.include)) {
+                    queryOptions.include.push(addedInclude);
+                } else {
+                    queryOptions.include = queryOptions.include
+                        ? [queryOptions.include, addedInclude]
+                        : [addedInclude]
+                    ;
+                }
             }
         }
 

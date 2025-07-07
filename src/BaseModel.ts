@@ -85,33 +85,34 @@ import { Graph } from './Graph';
 
 export * from 'sequelize-typescript';
 
-import Promise = require('bluebird');
 import {
+    Attributes,
     BuildOptions as BuildOptionsOrigin,
     BulkCreateOptions as BulkCreateOptionsOrigin,
     CreateOptions as CreateOptionsOrigin,
     DropOptions,
     FindOptions as FindOptionsOrigin,
     Identifier, IncludeOptions,
-    InitOptions as InitOptionsOrigin,
+    InitOptions as InitOptionsOrigin, ModelAttributeColumnOptions,
     ModelAttributes,
     ModelOptions,
     QueryInterface as QueryInterfaceOrigin,
     QueryOptions as QueryOptionsOrigin,
     QueryOptionsWithType,
     QueryOptionsWithWhere,
+    QueryTypes,
     SaveOptions as InstanceSaveOptionsOrigin,
-    SyncOptions as SyncOptionsOrigin,
+    SyncOptions as SyncOptionsOrigin, TableName,
     UpdateOptions as UpdateOptionsOrigin,
     UpsertOptions as UpsertOptionsOrigin,
     WhereOptions,
+    Model,
 } from 'sequelize';
 import {
     DataType,
-    Model,
+    ModelType,
     Sequelize as SequelizeOrigin,
 } from 'sequelize-typescript';
-import QueryTypes = require('sequelize/types/lib/query-types');
 import {
     ColumnIndexOptions,
     IDynamicViewDefineOptions,
@@ -234,7 +235,7 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
         select,
         increment,
         rawSelect,
-        QueryGenerator,
+        queryGenerator: QueryGenerator,
     } = queryInterface as QueryInterface;
     const del = (queryInterface as QueryInterface).delete;
 
@@ -276,7 +277,7 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
         tableName: string,
         records: object[],
         options?: QueryOptions,
-        attributes?: string[] | string
+        attributes?: Record<string, ModelAttributeColumnOptions<Model<any, any>>>,
     ): Promise<object> {
         fixReturningOptions(options);
 
@@ -287,17 +288,17 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
     /**
      * Updates a row
      */
-    (queryInterface as QueryInterface).update = function(
-        instance: Model,
-        tableName: string,
+    (queryInterface as QueryInterface).update = function <M extends Model<any, any>>(
+        instance: M,
+        tableName: TableName,
         values: object,
-        identifier: WhereOptions,
+        identifier: WhereOptions<Attributes<M>>,
         options?: QueryOptions
     ): Promise<object> {
         fixReturningOptions(options);
 
         return update.call(this,
-            instance, tableName, values, identifier, options);
+            instance as M, tableName, values, identifier, options);
     };
 
     /**
@@ -338,7 +339,7 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
         tableName: string,
         identifier: WhereOptions,
         options?: QueryOptions,
-        model?: typeof Model
+        model?: ModelType<any, any>,
     ): Promise<object> {
         fixReturningOptions(options);
 
@@ -415,14 +416,13 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
      * Returns selected rows
      */
     (queryInterface as QueryInterface).select = function(
-        model: typeof Model | null,
+        model: ModelType<any, any>,
         tableName: string,
         options?: QueryOptionsWithWhere,
     ): Promise<object[]> {
         fixReturningOptions(options as any);
 
-        return select.call(this,
-            model, tableName, options);
+        return select.call(this, model, tableName, options);
     };
 
     /**
@@ -448,7 +448,7 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
         tableName: string,
         options: QueryOptionsWithWhere,
         attributeSelector: string | string[],
-        model?: typeof Model
+        model?: ModelType<any, any>
     ): Promise<string[]> {
         fixReturningOptions(options as any);
 
@@ -468,7 +468,8 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
         parentViewParams?: ViewParams,
         path: string = '',
     ): string {
-        const model: typeof BaseModel = options.model as typeof BaseModel;
+        const model: typeof BaseModel = options.model as
+            unknown as typeof BaseModel;
         const modelOptions: InitOptions = (
             (model || {} as any).options || {} as any
         ) as InitOptions;
@@ -745,7 +746,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      *
      * @param {SyncOptions} [options]
      */
-    public static sync(options?: SyncOptions): Promise<any> {
+    public static async sync(options?: SyncOptions): Promise<any> {
         if ((this as any).options && (this as any).options.treatAsView) {
             // all views skipped until all tables defined
             return Promise.resolve();
@@ -799,7 +800,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         );
 
         if (self.options.isDynamicView) {
-            (viewDef.match(RX_MATCHER) || []).forEach(param => {
+            (viewDef.match(RX_MATCHER) || []).forEach((param: string) => {
                 // noinspection JSUnusedLocalSymbols
                 const [_, name] = (param.match(RX_NAME_MATCHER) || ['', '']);
                 const RX_PARAM = new RegExp(`@\{${name}\}`, 'g');
