@@ -39,6 +39,13 @@ import { BeforeBulkDestroy, BeforeBulkRestore } from 'sequelize-typescript';
  * transaction) just before the soft-delete sets `deletedAt`; `beforeBulkRestore`
  * does the inverse, clearing it as `deletedAt` is cleared.
  *
+ * The sibling UPDATE runs on `this` — the concrete model the hook fires for,
+ * bound by Sequelize at call time (`runHooks` -> `hook.apply(model, ...)`) —
+ * rather than the class captured at decoration time. That lets the decorator be
+ * declared on an abstract base model (e.g. a shared `BaseParanoid`) and still
+ * resolve to the real subclass; the captured constructor would be the
+ * (unregistered) base and break with "model not initialized".
+ *
  * `hooks: false` avoids hook re-entrancy and keeps the delete from bumping an
  * `@UpdatedBy` column; `silent: true` keeps it from bumping `updatedAt`, so the
  * delete writes exactly `deletedBy` + `deletedAt` (like the native paranoid
@@ -57,14 +64,14 @@ export function DeletedBy(target: any, propertyName: string): void {
         return;
     }
 
-    ctor[bulkHook] = async function (options: any): Promise<void> {
+    ctor[bulkHook] = async function (this: any, options: any): Promise<void> {
         const userId = currentMetadata()?.userId;
 
         if (userId == null || !options || !options.where) {
             return;
         }
 
-        await ctor.update(
+        await this.update(
             { [propertyName]: userId },
             {
                 where: options.where,
@@ -75,12 +82,12 @@ export function DeletedBy(target: any, propertyName: string): void {
         );
     };
 
-    ctor[restoreHook] = async function (options: any): Promise<void> {
+    ctor[restoreHook] = async function (this: any, options: any): Promise<void> {
         if (!options || !options.where) {
             return;
         }
 
-        await ctor.update(
+        await this.update(
             { [propertyName]: null },
             {
                 where: options.where,
