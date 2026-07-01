@@ -33,7 +33,7 @@
   "dependencies": {
     "@imqueue/core": "^2.0.13",
     "@imqueue/js": "^2.0.0",
-    "@imqueue/rpc": "^2.0.17",
+    "@imqueue/rpc": "^2.1.0",
     "@types/bluebird": "^3.5.42",
     "@types/validator": "^13.15.3",
     "bluebird": "^3.7.2",
