@@ -27,3 +27,6 @@ export * from './NullableIndex';
 export * from './AssociatedWith';
 export * from './ColumnIndex';
 export * from './Emittable';
+export * from './CreatedBy';
+export * from './UpdatedBy';
+export * from './DeletedBy';
