@@ -23,6 +23,7 @@
  */
 import { currentMetadata } from '@imqueue/rpc';
 import {
+    BeforeBulkCreate,
     BeforeBulkUpdate,
     BeforeCreate,
     BeforeUpdate,
@@ -39,8 +40,11 @@ import {
  *  - on UPDATE it always overwrites with the current actor — "last modified by"
  *    must reflect who actually ran the update and not be caller-spoofable.
  *
- * Three hooks are registered, because models are written in three ways:
- *  - INSERT                            -> `beforeCreate` (set-if-empty)
+ * Four hooks are registered, because models are written in four ways:
+ *  - single INSERT                    -> `beforeCreate` (set-if-empty)
+ *  - `Model.bulkCreate(records, …)`   -> `beforeBulkCreate` (set-if-empty on the
+ *    built instances; a plain `bulkCreate` does not fire `beforeCreate`, so the
+ *    per-instance hook alone would be bypassed)
  *  - instance `save()` / `update()`   -> `beforeUpdate` (receives the instance)
  *  - static `Model.update(values, …)` -> `beforeBulkUpdate` (receives options;
  *    the values to write live on `options.attributes`, and Sequelize filters the
@@ -56,6 +60,7 @@ import {
 export function UpdatedBy(target: any, propertyName: string): void {
     const ctor = target.constructor;
     const createHook = `__stampUpdatedByOnCreate$${propertyName}`;
+    const bulkCreateHook = `__stampUpdatedByOnBulkCreate$${propertyName}`;
     const singleHook = `__stampUpdatedBy$${propertyName}`;
     const bulkHook = `__stampBulkUpdatedBy$${propertyName}`;
 
@@ -68,6 +73,26 @@ export function UpdatedBy(target: any, propertyName: string): void {
 
         if (userId != null && instance[propertyName] == null) {
             instance[propertyName] = userId;
+        }
+    };
+
+    ctor[bulkCreateHook] = function (instances: any[], options: any): void {
+        const userId = currentMetadata()?.userId;
+
+        if (userId == null || !Array.isArray(instances)) {
+            return;
+        }
+
+        for (const instance of instances) {
+            if (instance && instance[propertyName] == null) {
+                instance[propertyName] = userId;
+            }
+        }
+
+        if (options && Array.isArray(options.fields)
+            && !options.fields.includes(propertyName)
+        ) {
+            options.fields.push(propertyName);
         }
     };
 
@@ -96,6 +121,7 @@ export function UpdatedBy(target: any, propertyName: string): void {
     };
 
     BeforeCreate(ctor, createHook);
+    BeforeBulkCreate(ctor, bulkCreateHook);
     BeforeUpdate(ctor, singleHook);
     BeforeBulkUpdate(ctor, bulkHook);
 }
