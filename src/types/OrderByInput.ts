@@ -31,9 +31,9 @@ export enum OrderDirection {
     desc = 'DESC',
 }
 
-export const ENUM_ORDER_DIRECTION = `'${
-    OrderDirection.asc}' | '${
-    OrderDirection.desc}'`;
+export const ENUM_ORDER_DIRECTION = `'${OrderDirection.asc}' | '${
+    OrderDirection.desc
+}'`;
 
 @indexed(() => `[fieldName: string]: ${ENUM_ORDER_DIRECTION}`)
 export class OrderByInput {

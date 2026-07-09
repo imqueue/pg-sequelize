@@ -21,7 +21,7 @@
  * purchase a proprietary commercial license. Please contact us at
  * <support@imqueue.com> to get commercial licensing options.
  */
-import { js, object } from '@imqueue/js';
+import { clearObject, isArray, isObject } from './js';
 import { CountOptions, Includeable, Transaction } from 'sequelize';
 import {
     Association,
@@ -45,8 +45,6 @@ import {
 import { ModelAttributeColumnReferencesOptions } from 'sequelize/types/model';
 
 export namespace query {
-    import isObject = js.isObject;
-    import isArray = js.isArray;
 
     const RX_OP = /^\$/;
     const RX_LIKE = /%/;
@@ -97,7 +95,7 @@ export namespace query {
                 space = false;
             }
 
-            if (char === '\'') {
+            if (char === "'") {
                 opened = !opened;
             }
         }
@@ -139,11 +137,9 @@ export namespace query {
         attributes = attributes || Object.keys(model.rawAttributes || {});
 
         if (isArray(input)) {
-            return (input as T[]).map(inputItem => pureData(
-                model,
-                inputItem,
-                attributes as string[],
-            ));
+            return (input as T[]).map(inputItem =>
+                pureData(model, inputItem, attributes as string[]),
+            );
         }
 
         return Object.keys(input as any).reduce((res: any, prop: string) => {
@@ -186,8 +182,8 @@ export namespace query {
         // make sure it contains primary key fields
         // that's a tiny trade-off to make sure we won't loose it for a domain
         // logic to use
-        primaryKeys(model).forEach(fieldName =>
-            !~list.indexOf(fieldName) && list.push(fieldName),
+        primaryKeys(model).forEach(
+            fieldName => !~list.indexOf(fieldName) && list.push(fieldName),
         );
 
         return list;
@@ -231,9 +227,9 @@ export namespace query {
         fields: string[],
         model?: typeof BaseModel,
     ): string[] {
-        let filteredAttributes = (attributes
+        let filteredAttributes = attributes
             ? Object.keys(attributes).filter(attr => ~fields.indexOf(attr))
-            : []);
+            : [];
 
         if (!filteredAttributes.length && model) {
             filteredAttributes = primaryKeys(model);
@@ -255,24 +251,29 @@ export namespace query {
         relations: string[],
     ): string[] {
         const associations: {
-            [name: string]: Association,
+            [name: string]: Association;
         } = model.associations || {};
 
-        return relations.map((name: string) => {
-            const association = (associations[name] || {}) as any;
+        return (
+            relations
+                .map((name: string) => {
+                    const association = (associations[name] || {}) as any;
 
-            if (association.source === model &&
-                association.foreignKey && (!(
-                    association.sourceKey ||
-                    association.associationType === 'BelongsToMany'
-                ))
-            ) {
-                return association.foreignKey;
-            }
+                    if (
+                        association.source === model &&
+                        association.foreignKey &&
+                        !(
+                            association.sourceKey ||
+                            association.associationType === 'BelongsToMany'
+                        )
+                    ) {
+                        return association.foreignKey;
+                    }
 
-            return null;
-        })
-            .filter(idField => idField) || [];
+                    return null;
+                })
+                .filter(idField => idField) || []
+        );
     }
 
     /**
@@ -363,8 +364,8 @@ export namespace query {
         ...merge: (Partial<T> | undefined)[]
     ): T {
         const queryOptions: any = {};
-        const { order } = merge.find((item: any) => item && !!item.order) ||
-            {} as any;
+        const { order } =
+            merge.find((item: any) => item && !!item.order) || ({} as any);
 
         if (order && isArray(order)) {
             // make sure order arg will not break selection
@@ -377,7 +378,9 @@ export namespace query {
 
         if (isArray(fields)) {
             queryOptions.attributes = filtered(
-                model.rawAttributes, fields, model,
+                model.rawAttributes,
+                fields,
+                model,
             );
         } else if (fields) {
             const fieldNames = Object.keys(fields);
@@ -391,15 +394,18 @@ export namespace query {
 
             // we may want to check if the given field is being filtered
             // and build where clause for it
-            Object.assign(queryOptions, toWhereOptions(
-                queryOptions.attributes.reduce((res: any, attr: string) => {
-                    if (fields[attr] !== false) {
-                        res[attr] = fields[attr];
-                    }
+            Object.assign(
+                queryOptions,
+                toWhereOptions(
+                    queryOptions.attributes.reduce((res: any, attr: string) => {
+                        if (fields[attr] !== false) {
+                            res[attr] = fields[attr];
+                        }
 
-                    return res;
-                }, {}),
-            ));
+                        return res;
+                    }, {}),
+                ),
+            );
 
             if (relations.length) {
                 queryOptions.include = [];
@@ -448,7 +454,7 @@ export namespace query {
         any,
         FieldsInput | undefined,
         Transaction | undefined,
-        string
+        string,
     ][];
 
     /**
@@ -477,21 +483,24 @@ export namespace query {
     ): ForeignKeyMap | null {
         let found = false;
 
-        const map: ForeignKeyMap = Object.keys(model.rawAttributes)
-            .reduce((fkMap, name) => {
-                const relation =
-                    model.rawAttributes[name].references as ModelAttributeColumnReferencesOptions
-                ;
+        const map: ForeignKeyMap = Object.keys(model.rawAttributes).reduce(
+            (fkMap, name) => {
+                const relation = model.rawAttributes[name]
+                    .references as ModelAttributeColumnReferencesOptions;
 
-                if (relation &&
-                    relation.model === parent.name && relation.key
+                if (
+                    relation &&
+                    relation.model === parent.name &&
+                    relation.key
                 ) {
                     fkMap[name] = relation.key;
                     found = true;
                 }
 
                 return fkMap;
-            }, {} as ForeignKeyMap);
+            },
+            {} as ForeignKeyMap,
+        );
 
         return found ? map : null;
     }
@@ -522,7 +531,7 @@ export namespace query {
             args.push([
                 model.associations[relation].target,
                 input[relation],
-                fields ? fields[relation] as FieldsInput : undefined,
+                fields ? (fields[relation] as FieldsInput) : undefined,
                 transaction,
                 relation,
             ]);
@@ -536,13 +545,15 @@ export namespace query {
                 model,
             );
 
-            foreignKey && Object.keys(foreignKey).forEach(property => {
-                if (!(input as any)[property]) {
-                    (input as any)[property] = (parent as any)[
-                        foreignKey[property]
-                    ];
-                }
-            });
+            if (foreignKey) {
+                Object.keys(foreignKey).forEach(property => {
+                    if (!(input as any)[property]) {
+                        (input as any)[property] = (parent as any)[
+                            foreignKey[property]
+                        ];
+                    }
+                });
+            }
         }
 
         return args;
@@ -602,19 +613,29 @@ export namespace query {
         noAppend: boolean = false,
         doCommit: boolean = true,
     ): Promise<Partial<T>> {
-        transaction = transaction || await database().transaction({
-            autocommit: false,
-        });
+        transaction =
+            transaction ||
+            (await database().transaction({
+                autocommit: false,
+            }));
 
         // todo: this could be optimized through bulk operations
         if (isArray(input) && parentProperty && parent) {
             parent.appendChild(
                 parentProperty,
-                await Promise.all((input as I[]).map(inputItem =>
-                    doCreateEntity(
-                        model, inputItem, fields, transaction,
-                        parentProperty, parent, true, doCommit,
-                    )),
+                await Promise.all(
+                    (input as I[]).map(inputItem =>
+                        doCreateEntity(
+                            model,
+                            inputItem,
+                            fields,
+                            transaction,
+                            parentProperty,
+                            parent,
+                            true,
+                            doCommit,
+                        ),
+                    ),
                 ),
             );
 
@@ -622,14 +643,20 @@ export namespace query {
         }
 
         if (fields) {
-            primaryKeys(model).forEach(name =>
-                !fields[name] && (fields[name] = false));
+            primaryKeys(model).forEach(
+                name => !fields[name] && (fields[name] = false),
+            );
         }
 
         const fieldNames = Object.keys(input as any);
         const relationArgs = prepareInput<T>(
-            input, filtered(model.associations, fieldNames),
-            model, fields, transaction, parent);
+            input,
+            filtered(model.associations, fieldNames),
+            model,
+            fields,
+            transaction,
+            parent,
+        );
         const entity = new (model as any)(input as any as ModelAttributes);
 
         await entity.save({
@@ -643,10 +670,12 @@ export namespace query {
             parent.appendChild(parentProperty, entity);
         }
 
-        await Promise.all(relationArgs.map(async args => {
-            args.push(entity);
-            await doCreateEntity(...args);
-        }));
+        await Promise.all(
+            relationArgs.map(async args => {
+                args.push(entity);
+                await doCreateEntity(...args);
+            }),
+        );
 
         if (!parent && doCommit) {
             await transaction.commit();
@@ -745,9 +774,7 @@ export namespace query {
      *
      * @param {any} orderBy
      */
-    export function toOrderOptions<T>(
-        orderBy?: OrderByInput,
-    ): FindOptions {
+    export function toOrderOptions<T>(orderBy?: OrderByInput): FindOptions {
         const order: FindOptions = {};
 
         if (!orderBy) {
@@ -763,9 +790,10 @@ export namespace query {
         order.order = [];
 
         for (const field of fields) {
-            (order.order as [string, string][]).push(
-                [field, toOrderDirection(orderBy[field])],
-            );
+            (order.order as [string, string][]).push([
+                field,
+                toOrderDirection(orderBy[field]),
+            ]);
         }
 
         return order;
@@ -857,9 +885,11 @@ export namespace query {
             if (date.toISOString() === value) {
                 return date;
             }
-        } catch (err) { /* not a date */ }
+        } catch (err) {
+            /* not a date */
+        }
 
-        return ((+value + '') === value) ? +value : value;
+        return +value + '' === value ? +value : value;
     }
 
     /**
@@ -877,7 +907,7 @@ export namespace query {
             return {};
         }
 
-        object.clearObject(filter);
+        clearObject(filter);
 
         let inputData = null;
 
@@ -895,15 +925,16 @@ export namespace query {
                 const includeData = {
                     model: inputDataProp.model,
                     required: true,
-                    ...toWhereOptions(withRangeFilters(data),
+                    ...toWhereOptions(
+                        withRangeFilters(data),
                         inputDataProp.input,
                     ),
                 };
 
                 // NOTE: If included data contains fields which are empty,
                 // it should be deleted
-                object.clearObject(filter);
-                options.include = js.isArray(options.include)
+                clearObject(filter);
+                options.include = isArray(options.include)
                     ? options.include.concat(includeData)
                     : [includeData];
 
@@ -929,9 +960,10 @@ export namespace query {
             if (RX_OP.test(prop)) {
                 Object.assign(
                     options.where,
-                    parseFilter({ [prop]: data, } as FilterInput),
+                    parseFilter({ [prop]: data } as FilterInput),
                 );
-            } else if (data && data.start && data.end) { // range filter
+            } else if (data && data.start && data.end) {
+                // range filter
                 Object.assign(options.where, {
                     [prop]: { [Op.between]: [data.start, data.end] },
                 });
@@ -1011,7 +1043,8 @@ export namespace query {
         for (const prop of Object.keys(filter)) {
             const col = prop.replace(RX_RANGE, '');
 
-            if (col === prop) { // not a range filter
+            if (col === prop) {
+                // not a range filter
                 if (isObject(filter[prop])) {
                     withRangeFilters(filter[prop]);
                 }
@@ -1027,7 +1060,8 @@ export namespace query {
 
             if (filter[col]) {
                 throw new TypeError(
-                    `Only one of filtering options "${col
+                    `Only one of filtering options "${
+                        col
                     }" or "${prop}" can be passed as filtering option!`,
                 );
             }
@@ -1050,11 +1084,11 @@ export namespace query {
      */
     export function getInclude(
         queryOptions: FindOptions,
-        path: typeof Model[],
+        path: (typeof Model)[],
     ): IncludeOptions | null {
         const currentModel = path.shift();
 
-        for (const include of (queryOptions.include as any || [])) {
+        for (const include of (queryOptions.include as any) || []) {
             const model = (include as IncludeOptions).model;
 
             // noinspection JSIncompatibleTypesComparison
@@ -1155,9 +1189,10 @@ export namespace query {
             for (const include of queryOptions.include as IncludeOptions[]) {
                 const as = fields.as;
 
-                if (include as any === model || (
-                    include.model === model && (!as || as === include.as)
-                )) {
+                if (
+                    (include as any) === model ||
+                    (include.model === model && (!as || as === include.as))
+                ) {
                     Object.assign(include, fields);
                     found = true;
                 }

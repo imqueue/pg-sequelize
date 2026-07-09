@@ -87,11 +87,12 @@ function annotate(
 ): void {
     const indices = (getOptions(target) as any).indices || [];
     addOptions(target, {
-        indices: [...indices, {
-            column: propertyName,
-            options,
-        }],
+        indices: [
+            ...indices,
+            {
+                column: propertyName,
+                options,
+            },
+        ],
     } as any);
 }
-
-

@@ -60,15 +60,19 @@ export const FILTER_OPS = {
 export class FilterInput {
     @property(
         'FilterInput | Array<FilterInput|number|string|boolean|null>',
-        true)
+        true,
+    )
     public $and?:
-        FilterInput | Array<FilterInput|number|string|boolean|null>;
+        | FilterInput
+        | Array<FilterInput | number | string | boolean | null>;
 
     @property(
         'FilterInput | Array<FilterInput|number|string|boolean|null>',
-        true)
+        true,
+    )
     public $or?:
-        FilterInput | Array<FilterInput|number|string|boolean|null>;
+        | FilterInput
+        | Array<FilterInput | number | string | boolean | null>;
 
     @property('number', true)
     public $gt?: number;

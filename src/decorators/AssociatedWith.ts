@@ -33,9 +33,7 @@ export interface IAssociated {
  *
  * @param {IAssociated} association - input data
  */
-export function AssociatedWith(
-    cb: () => IAssociated,
-) {
+export function AssociatedWith(cb: () => IAssociated) {
     return (target: any, key: string) => {
         const association = cb();
 

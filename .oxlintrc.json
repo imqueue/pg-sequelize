@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-debugger": "error",
+    "no-console": ["warn", { "allow": ["warn", "error", "info"] }],
+    "no-unused-vars": "warn",
+    "typescript/no-this-alias": "off"
+  },
+  "ignorePatterns": [
+    "**/*.js",
+    "**/*.d.ts",
+    "docs/",
+    "coverage/",
+    ".nyc_output/",
+    ".agent-out/",
+    "node_modules/"
+  ]
+}

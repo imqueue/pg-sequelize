@@ -38,7 +38,7 @@ export type GraphMap<T> = Map<T, T[]>;
  */
 export type GraphForeachCallback<T> = (
     vertex: T,
-    visited: Map<T, boolean>
+    visited: Map<T, boolean>,
 ) => false | void;
 
 /**
@@ -185,7 +185,7 @@ export class Graph<T> {
         callback?: GraphForeachCallback<T>,
         visited = new Map<T, boolean>(),
     ): Graph<T> {
-        if (!visited.get(vertex)){
+        if (!visited.get(vertex)) {
             visited.set(vertex, true);
 
             if (callback && callback(vertex, visited) === false) {
@@ -265,9 +265,11 @@ export class Graph<T> {
             stack.set(vertex, true);
 
             for (const currentNode of this.list.get(vertex) || []) {
-                if ((!visited.get(currentNode) && this.detectCycle(
-                    currentNode, visited, stack,
-                )) || stack.get(currentNode)) {
+                if (
+                    (!visited.get(currentNode) &&
+                        this.detectCycle(currentNode, visited, stack)) ||
+                    stack.get(currentNode)
+                ) {
                     return true;
                 }
             }

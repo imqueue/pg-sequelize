@@ -61,11 +61,15 @@ export function NullableIndex(...args: any[]): FunctionType | void {
         propertyName: string,
         propertyDescriptor?: PropertyDescriptor,
     ) => {
-        ColumnIndex(Object.assign(args[0], {
-            expression: `"${propertyName}" IS NULL`
-        }))(target, propertyName, propertyDescriptor);
-        ColumnIndex(Object.assign(args[0], {
-            expression: `"${propertyName}" IS NOT NULL`
-        }))(target, propertyName, propertyDescriptor);
+        ColumnIndex(
+            Object.assign(args[0], {
+                expression: `"${propertyName}" IS NULL`,
+            }),
+        )(target, propertyName, propertyDescriptor);
+        ColumnIndex(
+            Object.assign(args[0], {
+                expression: `"${propertyName}" IS NOT NULL`,
+            }),
+        )(target, propertyName, propertyDescriptor);
     };
 }

@@ -15,15 +15,13 @@
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
-import { js } from '@imqueue/js';
 import { DEFAULT_IMQ_SERVICE_OPTIONS, ILogger } from '@imqueue/rpc';
 import * as fs from 'fs';
 import chalk from 'chalk';
 import { resolve, sep } from 'path';
 import { SequelizeOptions } from 'sequelize-typescript';
 import { Sequelize } from './BaseModel';
-import isDefined = js.isDefined;
-import isOk = js.isOk;
+import { isDefined, isOk } from './helpers/js';
 
 /* models exports! */
 export * from './Graph';
@@ -115,13 +113,14 @@ const RX_SQL_PREFIX = /Execut(ed|ing) \(default\):/;
  * @return {string}
  */
 export function formatSql(sql: string): string {
-    return SQL_PRETTIFY ?
-        sqlFormatter.format(sql)
-            .replace(RX_SQL_NUM_LAYOUT, '$1 ')
-            .replace(RX_SQL_NUM_END, '$1$2')
-            .replace(RX_BRK_DBL_AND, '&&')
-            .replace(RX_BRK_CAST, '$1')
-            .replace(RX_BRK_POCKETS, '$1$2')
+    return SQL_PRETTIFY
+        ? sqlFormatter
+              .format(sql)
+              .replace(RX_SQL_NUM_LAYOUT, '$1 ')
+              .replace(RX_SQL_NUM_END, '$1$2')
+              .replace(RX_BRK_DBL_AND, '&&')
+              .replace(RX_BRK_CAST, '$1')
+              .replace(RX_BRK_POCKETS, '$1$2')
         : sql;
 }
 
@@ -134,14 +133,14 @@ export function formatSql(sql: string): string {
  * @param {ILogger} logger
  * @return {(sql: string, time: number) => string}
  */
-const logging = (logger: ILogger) => (sql: string, time: number) =>
-    logger.log(SQL_COLORIZE
-        ? `${(chalk.bold.yellow as (...args: any[]) => any)('SQL Query:')} ${
-            (chalk.cyan  as (...args: any[]) => any)(
-                formatSql(sql.replace(RX_SQL_PREFIX, '')
-            ))}`
-        : `SQL Query: ${formatSql(sql.replace(RX_SQL_PREFIX, ''))}`,
-        (typeof time === 'number' ? `executed in ${time} ms` : '')
+const logging = (logger: ILogger) => (sql: string, time?: number) =>
+    logger.log(
+        SQL_COLORIZE
+            ? `${(chalk.bold.yellow as (...args: any[]) => any)('SQL Query:')} ${(
+                  chalk.cyan as (...args: any[]) => any
+              )(formatSql(sql.replace(RX_SQL_PREFIX, '')))}`
+            : `SQL Query: ${formatSql(sql.replace(RX_SQL_PREFIX, ''))}`,
+        typeof time === 'number' ? `executed in ${time} ms` : '',
     );
 
 let orm: Sequelize;
@@ -154,14 +153,12 @@ let orm: Sequelize;
  * @param {IMQORMOptions} [options]
  * @return {Sequelize}
  */
-export function database(
-    options?: IMQORMOptions,
-): Sequelize {
+export function database(options?: IMQORMOptions): Sequelize {
     if (typeof orm !== 'undefined') {
         return orm;
     } else if (typeof options === 'undefined') {
         throw new TypeError(
-            'First call of database() must provide valid options!'
+            'First call of database() must provide valid options!',
         );
     }
 
@@ -169,7 +166,7 @@ export function database(
         if (!DB_CONN_STR) {
             throw new TypeError(
                 'Either environment DB_CONN_STR should be set or ' +
-                'connectionString property given!'
+                    'connectionString property given!',
             );
         }
 
@@ -181,29 +178,31 @@ export function database(
     }
 
     if (!options.logger) {
-        options.logger = DEFAULT_IMQ_SERVICE_OPTIONS.logger
-            || console as ILogger;
+        options.logger =
+            DEFAULT_IMQ_SERVICE_OPTIONS.logger || (console as ILogger);
     }
 
     options.sequelize.logging =
-        !isDefined(options.sequelize.logging) ||
-        isOk(options.sequelize.logging)
+        !isDefined(options.sequelize.logging) || isOk(options.sequelize.logging)
             ? logging(
-                typeof options.sequelize.logging === 'function'
-                    ? options.sequelize.logging as any as ILogger
-                    : options.logger,
-            )
-            : options.sequelize.logging as boolean;
+                  typeof options.sequelize.logging === 'function'
+                      ? (options.sequelize.logging as any as ILogger)
+                      : options.logger,
+              )
+            : (options.sequelize.logging as boolean);
 
     orm = new Sequelize(options.connectionString as string, options.sequelize);
 
-    orm.addModels(walk(resolve(options.modelsPath))
-        .filter(name => JS_EXT_RX.test(name))
-        .map(filename => require(filename)[
-            filename.split(sep)
-                .reverse()[0]
-                .replace(JS_EXT_RX, '')
-            ]));
+    orm.addModels(
+        walk(resolve(options.modelsPath))
+            .filter(name => JS_EXT_RX.test(name))
+            .map(
+                filename =>
+                    require(filename)[
+                        filename.split(sep).reverse()[0].replace(JS_EXT_RX, '')
+                    ],
+            ),
+    );
 
     options.logger.log('Database models initialized...');
 

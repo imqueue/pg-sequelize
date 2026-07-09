@@ -52,9 +52,7 @@ export const RX_NAME_MATCHER = new RegExp(MATCHER, 'i');
  * @param {IViewDefineOptions | string} options - view definition options
  * @return {() => any} - view annotation decorator
  */
-export function DynamicView(
-    options: IDynamicViewDefineOptions,
-) {
+export function DynamicView(options: IDynamicViewDefineOptions) {
     if (!options || !options.viewDefinition.trim()) {
         throw new TypeError('View definition is missing!');
     }
@@ -66,12 +64,13 @@ export function DynamicView(
     const viewParams = options.viewParams || {};
 
     (viewDef.match(RX_MATCHER) || []).forEach(param => {
-        const [, name] = (param.match(RX_NAME_MATCHER) || ['', '']);
+        const [, name] = param.match(RX_NAME_MATCHER) || ['', ''];
 
         if (typeof viewParams[name] !== 'string') {
             throw new TypeError(
                 `View definition contains param '${
-                    name}', but it was not provided`,
+                    name
+                }', but it was not provided`,
             );
         }
     });

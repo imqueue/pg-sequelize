@@ -85,17 +85,18 @@ import { Graph } from './Graph';
 
 export * from 'sequelize-typescript';
 
-import Promise = require('bluebird');
 import {
     BuildOptions as BuildOptionsOrigin,
     BulkCreateOptions as BulkCreateOptionsOrigin,
     CreateOptions as CreateOptionsOrigin,
     DropOptions,
     FindOptions as FindOptionsOrigin,
-    Identifier, IncludeOptions,
+    Identifier,
+    IncludeOptions,
     InitOptions as InitOptionsOrigin,
     ModelAttributes,
-    ModelOptions, ModelType,
+    ModelOptions,
+    ModelType,
     QueryInterface as QueryInterfaceOrigin,
     QueryOptions as QueryOptionsOrigin,
     QueryOptionsWithType,
@@ -131,8 +132,10 @@ export type Modify<T, R> = Pick<T, Exclude<keyof T, keyof R>> & R;
  * Original toJSON method from sequelize's Model class.
  */
 const toJSON = Model.prototype.toJSON;
-const RX_CREATE_VIEW = new RegExp('create\\s+(or\\s+replace\\s+)?' +
-    '(materialized\\s+)?view\\s+(.*?)\\s+as', 'i');
+const RX_CREATE_VIEW = new RegExp(
+    'create\\s+(or\\s+replace\\s+)?' + '(materialized\\s+)?view\\s+(.*?)\\s+as',
+    'i',
+);
 const RX_SQL_END = /;$/;
 const RX_RETURNING = /returning\s+\*/i;
 const ALIAS_PATH_DELIMITER = '->';
@@ -164,26 +167,22 @@ export interface WithIncludeMap extends InitOptions {
 export type IModelClass<T extends BaseModel<T>> = new () => T;
 
 // noinspection JSUnusedGlobalSymbols
-export type UpsertOptions =
-    Modify<UpsertOptionsOrigin, ReturningOptions>;
+export type UpsertOptions = Modify<UpsertOptionsOrigin, ReturningOptions>;
 // noinspection JSUnusedGlobalSymbols
-export type BuildOptions =
-    Modify<BuildOptionsOrigin, ReturningOptions>;
+export type BuildOptions = Modify<BuildOptionsOrigin, ReturningOptions>;
 // noinspection JSUnusedGlobalSymbols
-export type BulkCreateOptions =
-    Modify<BulkCreateOptionsOrigin, ReturningOptions>;
+export type BulkCreateOptions = Modify<
+    BulkCreateOptionsOrigin,
+    ReturningOptions
+>;
 // noinspection JSUnusedGlobalSymbols
-export type QueryOptions =
-    Modify<QueryOptionsOrigin, ReturningOptions>;
+export type QueryOptions = Modify<QueryOptionsOrigin, ReturningOptions>;
 // noinspection JSUnusedGlobalSymbols
-export type UpdateOptions =
-    Modify<UpdateOptionsOrigin, ReturningOptions>;
+export type UpdateOptions = Modify<UpdateOptionsOrigin, ReturningOptions>;
 // noinspection JSUnusedGlobalSymbols
-export type CreateOptions =
-    Modify<CreateOptionsOrigin, ReturningOptions>;
+export type CreateOptions = Modify<CreateOptionsOrigin, ReturningOptions>;
 // noinspection JSUnusedGlobalSymbols
-export type SaveOptions =
-    Modify<InstanceSaveOptionsOrigin, ReturningOptions>;
+export type SaveOptions = Modify<InstanceSaveOptionsOrigin, ReturningOptions>;
 
 /**
  * Extends original QueryInterface from sequelize to add support of create/drop
@@ -210,7 +209,8 @@ const NUMBERS_MAP = new Map<string, (value: any) => number>([
 ]);
 
 function fixReturningOptions(options?: ReturningOptions) {
-    if (options &&
+    if (
+        options &&
         options.returning &&
         Array.isArray(options.returning) &&
         !options.returning.length
@@ -225,7 +225,6 @@ function fixReturningOptions(options?: ReturningOptions) {
  * @param {QueryInterface} queryInterface
  */
 function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
-
     const {
         insert,
         upsert,
@@ -243,7 +242,7 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
     /**
      * Inserts a new record
      */
-    (queryInterface as QueryInterface).insert = function(
+    (queryInterface as QueryInterface).insert = function (
         instance: Model,
         tableName: string,
         values: object,
@@ -251,30 +250,35 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
     ): Promise<object> {
         fixReturningOptions(options);
 
-        return insert.call(this,
-            instance, tableName, values, options);
+        return insert.call(this, instance, tableName, values, options);
     };
 
     /**
      * Inserts or Updates a record in the database
      */
-    (queryInterface as QueryInterface).upsert = function(
+    (queryInterface as QueryInterface).upsert = function (
         tableName: string,
         values: object,
         updateValues: object,
         model: typeof Model,
-        options?: QueryOptions
+        options?: QueryOptions,
     ): Promise<object> {
         fixReturningOptions(options);
 
-        return upsert.call(this,
-            tableName, values, updateValues, model, options);
+        return upsert.call(
+            this,
+            tableName,
+            values,
+            updateValues,
+            model,
+            options as any,
+        );
     };
 
     /**
      * Inserts multiple records at once
      */
-    (queryInterface as QueryInterface).bulkInsert = function(
+    (queryInterface as QueryInterface).bulkInsert = function (
         tableName: string,
         records: object[],
         options?: QueryOptions,
@@ -282,46 +286,63 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
     ): Promise<object> {
         fixReturningOptions(options);
 
-        return bulkInsert.call(this,
-            tableName, records, options, attributes);
+        return (bulkInsert as any).call(
+            this,
+            tableName,
+            records,
+            options,
+            attributes,
+        );
     };
 
     /**
      * Updates a row
      */
-    (queryInterface as any).update = function<M extends Model>(
+    (queryInterface as any).update = function <M extends Model>(
         instance: M,
         tableName: TableName,
         values: object,
         identifier: WhereOptions,
-        options?: QueryOptions
+        options?: QueryOptions,
     ): Promise<object> {
         fixReturningOptions(options);
 
-        return update.call(this,
-            instance, tableName, values, identifier, options);
+        return update.call(
+            this,
+            instance,
+            tableName,
+            values,
+            identifier,
+            options,
+        );
     };
 
     /**
      * Updates multiple rows at once
      */
-    (queryInterface as QueryInterface).bulkUpdate = function(
+    (queryInterface as QueryInterface).bulkUpdate = function (
         tableName: string,
         values: object,
         identifier: WhereOptions,
         options?: QueryOptions,
-        attributes?: string[] | string
+        attributes?: string[] | string,
     ): Promise<object> {
         fixReturningOptions(options);
 
-        return bulkUpdate.call(this,
-            tableName, values, identifier, options, attributes);
+        return bulkUpdate.call(
+            this,
+            tableName,
+            values,
+            identifier,
+            options,
+            attributes,
+        );
     };
 
     /**
      * Deletes a row
      */
-    (queryInterface as QueryInterface).delete = function(
+    (queryInterface as QueryInterface).delete = function (
         instance: Model | null,
         tableName: string,
         identifier: WhereOptions,
@@ -329,14 +350,13 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
     ): Promise<object> {
         fixReturningOptions(options);
 
-        return del.call(this,
-            instance, tableName, identifier, options);
+        return del.call(this, instance, tableName, identifier, options);
     };
 
     /**
      * Deletes multiple rows at once
      */
-    (queryInterface as QueryInterface).bulkDelete = function(
+    (queryInterface as QueryInterface).bulkDelete = function (
         tableName: TableName,
         identifier: WhereOptions<any>,
         options?: QueryOptions,
@@ -344,24 +364,29 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
     ): Promise<object> {
         fixReturningOptions(options);
 
-        return bulkDelete.call(this,
-            tableName, identifier, options, model);
+        return bulkDelete.call(this, tableName, identifier, options, model);
     };
 
     /**
      * Increments a row value
      */
-    (queryInterface as QueryInterface).increment = function(
+    (queryInterface as QueryInterface).increment = function (
         instance: Model,
         tableName: string,
         values: object,
         identifier: WhereOptions,
-        options?: QueryOptions
+        options?: QueryOptions,
     ): Promise<object> {
         fixReturningOptions(options);
 
-        return increment.call(this,
-            instance, tableName, values, identifier, options);
+        return increment.call(
+            this,
+            instance,
+            tableName,
+            values,
+            identifier,
+            options,
+        );
     };
 
     /**
@@ -370,17 +395,15 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
      * @param {string} viewName - view name to drop
      * @param {DropOptions} [options] - drop operation options
      */
-    (queryInterface as QueryInterface).dropView = function(
+    (queryInterface as QueryInterface).dropView = function (
         viewName: string,
         options: DropOptions = {},
     ) {
         const dropViewSql = `DROP VIEW IF EXISTS "${
-            viewName}"${options.cascade ? ' CASCADE' : ''}`;
+            viewName
+        }"${options.cascade ? ' CASCADE' : ''}`;
 
-        return this.sequelize.query(
-            dropViewSql,
-            this.sequelize.options,
-        );
+        return this.sequelize.query(dropViewSql, this.sequelize.options);
     };
 
     /**
@@ -390,12 +413,12 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
      * @param {string} viewName - view name to create
      * @param {string} viewDefinition - raw sql query to create the view
      */
-    (queryInterface as QueryInterface).createView = function(
+    (queryInterface as QueryInterface).createView = function (
         viewName: string,
         viewDefinition: string,
     ) {
         const rx = new RegExp(
-            `\\s*create\\s+(or\\s+replace\\s+)?(temp|temporary\s+)?view\\s+"?${
+            `\\s*create\\s+(or\\s+replace\\s+)?((temp|temporary)\\s+)?view\\s+"?${
                 viewName
             }"?\\s+`,
             'i',
@@ -407,46 +430,48 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
             );
         }
 
-        return this.sequelize.query(
-            viewDefinition,
-            this.sequelize.options,
-        );
+        return this.sequelize.query(viewDefinition, this.sequelize.options);
     };
 
     /**
      * Returns selected rows
      */
-    (queryInterface as QueryInterface).select = function(
+    (queryInterface as QueryInterface).select = function (
         model: ModelType | null,
         tableName: TableName,
         options?: QueryOptionsWithWhere,
     ): Promise<object[]> {
         fixReturningOptions(options as any);
 
-        return select.call(this,
-            model, tableName, options);
+        return select.call(this, model, tableName, options);
     };
 
     /**
      * Increments a row value
      */
-    (queryInterface as QueryInterface).increment = function(
+    (queryInterface as QueryInterface).increment = function (
         instance: Model,
         tableName: string,
         values: object,
         identifier: WhereOptions,
-        options?: QueryOptions
+        options?: QueryOptions,
     ): Promise<object> {
         fixReturningOptions(options);
 
-        return increment.call(this,
-            instance, tableName, values, identifier, options);
+        return increment.call(
+            this,
+            instance,
+            tableName,
+            values,
+            identifier,
+            options,
+        );
     };
 
     /**
      * Selects raw without parsing the string into an object
      */
-    (queryInterface as QueryInterface).rawSelect = function(
+    (queryInterface as QueryInterface).rawSelect = function (
         tableName: TableName,
         options: QueryOptionsWithWhere,
         attributeSelector: string | string[],
@@ -454,8 +479,13 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
     ): Promise<string[]> {
         fixReturningOptions(options as any);
 
-        return rawSelect.call(this,
-            tableName, options, attributeSelector, model);
+        return rawSelect.call(
+            this,
+            tableName,
+            options,
+            attributeSelector,
+            model,
+        );
     };
 
     /**
@@ -471,28 +501,28 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
         path: string = '',
     ): string {
         const model = options.model as unknown as typeof BaseModel;
-        const modelOptions: InitOptions = (
-            (model || {} as any).options || {} as any
-        ) as InitOptions;
+        const modelOptions: InitOptions = ((model || ({} as any)).options ||
+            ({} as any)) as InitOptions;
 
         path = path
             ? `${path}${ALIAS_PATH_DELIMITER}${options.as}`
-            : (options.as || '');
+            : options.as || '';
 
-        if (modelOptions.isDynamicView && (
-            options.viewParams || parentViewParams
-        )) {
-
-            const viewParams = Object.assign({},
+        if (
+            modelOptions.isDynamicView &&
+            (options.viewParams || parentViewParams)
+        ) {
+            const viewParams = Object.assign(
+                {},
                 parentViewParams || {},
                 options.viewParams || {},
             );
 
             sqlQuery = sqlQuery.replace(
                 `JOIN "${model.getTableName()}" AS "${path}"`,
-                `JOIN (${model.getViewDefinition(viewParams, true)
-                    .replace(RX_SQL_END, '')
-                }) AS "${path}"`,
+                `JOIN (${model
+                    .getViewDefinition(viewParams, true)
+                    .replace(RX_SQL_END, '')}) AS "${path}"`,
             );
         }
 
@@ -518,7 +548,9 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
         const modelOptions: InitOptions = model.options as InitOptions;
         let sqlQuery = selectQuery.call(
             queryGenerator as any,
-            tableName, options, model,
+            tableName,
+            options,
+            model,
         );
         const viewParams = Object.assign({}, modelOptions.viewParams);
 
@@ -527,9 +559,9 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
 
             sqlQuery = sqlQuery.replace(
                 `FROM "${tableName}" AS`,
-                `FROM (${model.getViewDefinition(viewParams, true)
-                    .replace(RX_SQL_END, '')
-                }) AS`,
+                `FROM (${model
+                    .getViewDefinition(viewParams, true)
+                    .replace(RX_SQL_END, '')}) AS`,
             );
         }
 
@@ -547,14 +579,13 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
  * Overriding sequelize behavior to support views
  */
 export class Sequelize extends SequelizeOrigin {
-
     /**
      * Returns an instance of QueryInterface.
      * Supports views.
      *
      * @return {QueryInterface}
      */
-    public getQueryInterface(): QueryInterface {
+    public override getQueryInterface(): QueryInterface {
         const self: any = this;
 
         super.getQueryInterface();
@@ -574,7 +605,7 @@ export class Sequelize extends SequelizeOrigin {
      * @param {ModelOptions} [options]
      * @return {typeof BaseModel<TInstance>}
      */
-    public define<TInstance, TAttributes>(
+    public override define<TInstance, TAttributes>(
         modelName: string,
         attributes: ModelAttributes,
         options?: ModelOptions,
@@ -597,7 +628,7 @@ export class Sequelize extends SequelizeOrigin {
      * @param {SyncOptions} [options]
      * @return {Promise<any>}
      */
-    public sync(options?: SyncOptions): Promise<any> {
+    public override sync(options?: SyncOptions): Promise<any> {
         const withViews = !options || (options && !options.withNoViews);
         const syncResult = super.sync(options);
 
@@ -608,8 +639,7 @@ export class Sequelize extends SequelizeOrigin {
 
         return (withViews
             ? syncResult.then(() => this.syncViews())
-            : syncResult
-        ) as unknown as Promise<any>;
+            : syncResult) as unknown as Promise<any>;
     }
 
     /**
@@ -619,8 +649,11 @@ export class Sequelize extends SequelizeOrigin {
      * @return {Promise<any>}
      */
     public syncIndices(options?: SyncOptions): Promise<any> {
-        return Promise.all(this.getModelsWithIndices().map(model =>
-            model.syncIndices(options)));
+        return Promise.all(
+            this.getModelsWithIndices().map(model =>
+                model.syncIndices(options),
+            ),
+        );
     }
 
     /**
@@ -631,15 +664,18 @@ export class Sequelize extends SequelizeOrigin {
     public syncViews(options?: SyncOptions): Promise<any> {
         const views = this.getViews();
 
-        return Promise.all(views.map((view) => view.syncView(options)));
+        return Promise.all(views.map(view => view.syncView(options)));
     }
 
     public getModelsWithIndices() {
-        const models: typeof BaseModel[] = [];
+        const models: (typeof BaseModel)[] = [];
 
         (this as any).modelManager.models.forEach((model: any) => {
-            if (model && model.options &&
-                model.options.indices && model.options.indices.length
+            if (
+                model &&
+                model.options &&
+                model.options.indices &&
+                model.options.indices.length
             ) {
                 models.push(model);
             }
@@ -653,8 +689,8 @@ export class Sequelize extends SequelizeOrigin {
      *
      * @return {Array<typeof BaseModel>}
      */
-    public getViews(): typeof BaseModel[] {
-        const views: typeof BaseModel[] = [];
+    public getViews(): (typeof BaseModel)[] {
+        const views: (typeof BaseModel)[] = [];
 
         (this as any).modelManager.models.forEach((model: any) => {
             if (model && model.options && model.options.treatAsView) {
@@ -672,21 +708,23 @@ export class Sequelize extends SequelizeOrigin {
      * @param {string | { query: string, values: any[] }} sqlQuery
      * @param {QueryOptions} options
      */
-    public query(
-        sqlQuery: string | { query: string, values: any[] },
+    public override query(
+        sqlQuery: string | { query: string; values: any[] },
         options?: QueryOptions | QueryOptionsWithType<QueryTypes.RAW>,
     ): Promise<any> {
-        if (options &&
+        if (
+            options &&
             Array.isArray((options as QueryOptions).returning) &&
             ((options as QueryOptions).returning as string[]).length
         ) {
-            const sqlText = (typeof sqlQuery === 'string'
-                ? sqlQuery
-                : sqlQuery.query
-            ).replace(RX_RETURNING, `RETURNING ${
-                ((options as QueryOptions).returning as string[])
-                    .map(field => `"${field}"`).join(', ')
-            }`);
+            const sqlText = (
+                typeof sqlQuery === 'string' ? sqlQuery : sqlQuery.query
+            ).replace(
+                RX_RETURNING,
+                `RETURNING ${((options as QueryOptions).returning as string[])
+                    .map(field => `"${field}"`)
+                    .join(', ')}`,
+            );
 
             if (typeof sqlQuery === 'string') {
                 sqlQuery = sqlText;
@@ -721,7 +759,6 @@ export class Sequelize extends SequelizeOrigin {
  * Base Model class extends native sequelize Model class
  */
 export abstract class BaseModel<T> extends Model<BaseModel<T>> {
-
     /**
      // noinspection JSUnusedGlobalSymbols
      * Override native drop method to add support of view drops
@@ -729,17 +766,13 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      * @param {DropOptions} options
      * @return {Promise<any>}
      */
-    public static drop(options?: DropOptions): Promise<any> {
+    public static override drop(options?: DropOptions): Promise<any> {
         const self: any = this;
-        const method = self.options && self.options.treatAsView
-            ? 'dropView'
-            : 'dropTable';
+        const method =
+            self.options && self.options.treatAsView ? 'dropView' : 'dropTable';
 
         // noinspection TypeScriptUnresolvedVariable
-        return self.QueryInterface[method](
-            self.getTableName(),
-            options,
-        );
+        return self.QueryInterface[method](self.getTableName(), options);
     }
 
     // noinspection JSUnusedGlobalSymbols
@@ -750,7 +783,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      *
      * @param {SyncOptions} [options]
      */
-    public static sync(options?: SyncOptions): Promise<any> {
+    public static override sync(options?: SyncOptions): Promise<any> {
         if ((this as any).options && (this as any).options.treatAsView) {
             // all views skipped until all tables defined
             return Promise.resolve();
@@ -777,11 +810,14 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
             );
         }
 
-        return queryInterface.dropView(self.getTableName())
-            .then(() => queryInterface.createView(
-                self.getTableName(),
-                self.getViewDefinition(),
-            ));
+        return queryInterface
+            .dropView(self.getTableName())
+            .then(() =>
+                queryInterface.createView(
+                    self.getTableName(),
+                    self.getViewDefinition(),
+                ),
+            );
     }
 
     /**
@@ -798,7 +834,8 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         const self: any = this;
         let viewDef: string = self.options.viewDefinition || '';
 
-        viewParams = Object.assign({},
+        viewParams = Object.assign(
+            {},
             self.options.viewParams,
             viewParams || {},
         );
@@ -806,8 +843,8 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         if (self.options.isDynamicView) {
             (viewDef.match(RX_MATCHER) || []).forEach(param => {
                 // noinspection JSUnusedLocalSymbols
-                const [_, name] = (param.match(RX_NAME_MATCHER) || ['', '']);
-                const RX_PARAM = new RegExp(`@\{${name}\}`, 'g');
+                const [_, name] = param.match(RX_NAME_MATCHER) || ['', ''];
+                const RX_PARAM = new RegExp(`@{${name}}`, 'g');
 
                 viewDef = viewDef.replace(RX_PARAM, E(viewParams[name]) + '');
             });
@@ -832,8 +869,15 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
             options: ColumnIndexOptions;
         }[] = (this.options as any).indices;
 
-        return Promise.all(indices.map((indexOptions, i) =>
-            this.syncIndex(indexOptions.column, indexOptions.options, i + 1)));
+        return Promise.all(
+            indices.map((indexOptions, i) =>
+                this.syncIndex(
+                    indexOptions.column,
+                    indexOptions.options,
+                    i + 1,
+                ),
+            ),
+        );
     }
 
     /**
@@ -852,38 +896,49 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         position: number,
     ) {
         const self: any = this;
-        const indexName: string = options.name ||
-            `${this.getTableName()}_${column}_idx${position}`;
+        const indexName: string =
+            options.name || `${this.getTableName()}_${column}_idx${position}`;
         const chain = Promise.resolve(true);
         // noinspection TypeScriptUnresolvedVariable
         const queryInterface = self.QueryInterface || self.queryInterface;
 
         if (!options.safe) {
-            chain.then(() => queryInterface.sequelize.query(`
-                DROP INDEX${options.concurrently
-                ? ' CONCURRENTLY' : ''} IF EXISTS "${indexName}"
-            `));
+            chain.then(() =>
+                queryInterface.sequelize.query(`
+                DROP INDEX${
+                    options.concurrently ? ' CONCURRENTLY' : ''
+                } IF EXISTS "${indexName}"
+            `),
+            );
         }
 
         // tslint:disable-next-line:max-line-length
         // noinspection TypeScriptUnresolvedVariable,PointlessBooleanExpressionJS
-        chain.then(() => queryInterface.sequelize.query(`
-                CREATE${options.unique
-            ? ' UNIQUE' : ''} INDEX${options.concurrently
-            ? ' CONCURRENTLY' : ''}${options.safe
-            ? ' IF NOT EXISTS' : ''} "${indexName}"${options.method
-            ? ` USING ${options.method}` : ''} ON "${
-            this.getTableName()}" (${options.expression
-            ? `(${options.expression})` : `"${column}"`})${options.collation
-            ? ` COLLATE ${options.collation}` : ''}${options.opClass
-            ? ` ${options.opClass}` : ''}${options.order
-            ? ` ${options.order}` : ''}${options.nullsFirst === true
-            ? ' NULLS FIRST' : (options.nullsFirst === false
-                ? ' NULLS LAST' : '')}${options.tablespace
-            ? ` TABLESPACE ${options.tablespace}` : ''}${
-            options.predicate
-                ? ` WHERE ${options.predicate}` : ''}
-            `));
+        chain.then(() =>
+            queryInterface.sequelize.query(`
+                CREATE${options.unique ? ' UNIQUE' : ''} INDEX${
+                    options.concurrently ? ' CONCURRENTLY' : ''
+                }${options.safe ? ' IF NOT EXISTS' : ''} "${indexName}"${
+                    options.method ? ` USING ${options.method}` : ''
+                } ON "${this.getTableName()}" (${
+                    options.expression
+                        ? `(${options.expression})`
+                        : `"${column}"`
+                })${options.collation ? ` COLLATE ${options.collation}` : ''}${
+                    options.opClass ? ` ${options.opClass}` : ''
+                }${options.order ? ` ${options.order}` : ''}${
+                    options.nullsFirst === true
+                        ? ' NULLS FIRST'
+                        : options.nullsFirst === false
+                          ? ' NULLS LAST'
+                          : ''
+                }${
+                    options.tablespace
+                        ? ` TABLESPACE ${options.tablespace}`
+                        : ''
+                }${options.predicate ? ` WHERE ${options.predicate}` : ''}
+            `),
+        );
 
         return chain;
     }
@@ -894,11 +949,9 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      *
      * @see {Sequelize#query}
      */
-    public static findAll<M>(
-        options?: FindOptions,
-    ): Promise<M[]> {
+    public static override findAll<M>(options?: FindOptions): Promise<M[]> {
         const method = super.findAll;
-        const original =  method.call(this, options);
+        const original = method.call(this as any, options) as Promise<any>;
 
         if (!(this as any).options.treatAsView) {
             return original;
@@ -908,12 +961,11 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
             if (result && !Array.isArray(result)) {
                 return (result as BaseModel<M>).fixNumbers() as any as M;
             } else if (result) {
-                result.map((entity: any) =>
-                    entity.fixNumbers() as M);
+                result.map((entity: any) => entity.fixNumbers() as M);
             }
 
             return result as any as M;
-        });
+        }) as Promise<M[]>;
     }
 
     // noinspection JSAnnotator
@@ -921,12 +973,16 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      * Search for a single instance by its primary key. This applies LIMIT 1,
      * so the listener will always be called with a single instance.
      */
-    public static findByPk<M>(
+    public static override findByPk<M>(
         identifier?: Identifier,
         options?: Omit<FindOptions, 'where'>,
     ): Promise<M | null> {
         const method = super.findByPk;
-        const original =  method.call(this, identifier, options);
+        const original = method.call(
+            this as any,
+            identifier,
+            options,
+        ) as Promise<any>;
 
         if (!(this as any).options.treatAsView) {
             return original;
@@ -946,11 +1002,11 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      * Search for a single instance. This applies LIMIT 1, so the listener will
      * always be called with a single instance.
      */
-    public static findOne<M>(
+    public static override findOne<M>(
         options?: FindOptions,
     ): Promise<M | null> {
         const method = super.findOne;
-        const original =  method.call(this, options);
+        const original = method.call(this as any, options) as Promise<any>;
 
         if (!(this as any).options.treatAsView) {
             return original;
@@ -990,7 +1046,8 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         // noinspection TypeScriptUnresolvedVariable
         const returning = (this as any)._options.returning;
 
-        if (returning &&
+        if (
+            returning &&
             Array.isArray(returning) &&
             !~returning.indexOf(name)
         ) {
@@ -1005,7 +1062,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
      * Serializes this model instance to JSON
      */
-    public toJSON(): any {
+    public override toJSON(): any {
         const serialized: any = toJSON.call(this);
         const props = Object.keys(this);
         // noinspection TypeScriptUnresolvedVariable
@@ -1071,7 +1128,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     private verifyProperty(prop: string, serialized: any) {
         // add more skipping props if needed...
         if (~['__eagerlyLoadedAssociations'].indexOf(prop)) {
-            return ;
+            return;
         }
 
         const val = (this as any)[prop];
@@ -1105,9 +1162,10 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
                 serialized[prop][i] = toJSON.call(val);
             }
 
-            serialized[prop][i] = val && val.toJSON
-                ? val.toJSON()
-                : JSON.parse(JSON.stringify(val));
+            serialized[prop][i] =
+                val && val.toJSON
+                    ? val.toJSON()
+                    : JSON.parse(JSON.stringify(val));
         }
     }
 
