@@ -21,7 +21,7 @@
  */
 import 'reflect-metadata';
 import { addOptions, setModelName } from 'sequelize-typescript';
-import { IViewDefineOptions } from './View';
+import { type IViewDefineOptions } from './View.js';
 
 /**
  * Key/Value parameter store

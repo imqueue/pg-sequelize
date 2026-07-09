@@ -21,9 +21,9 @@
  * purchase a proprietary commercial license. Please contact us at
  * <support@imqueue.com> to get commercial licensing options.
  */
-export * from './DynamicView';
-export * from './View';
-export * from './NullableIndex';
-export * from './AssociatedWith';
-export * from './ColumnIndex';
-export * from './Emittable';
+export * from './DynamicView.js';
+export * from './View.js';
+export * from './NullableIndex.js';
+export * from './AssociatedWith.js';
+export * from './ColumnIndex.js';
+export * from './Emittable.js';

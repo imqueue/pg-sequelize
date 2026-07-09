@@ -21,19 +21,26 @@
  * purchase a proprietary commercial license. Please contact us at
  * <support@imqueue.com> to get commercial licensing options.
  */
-import { clearObject, isArray, isObject } from './js';
-import { CountOptions, Includeable, Transaction } from 'sequelize';
+import { clearObject, isArray, isObject } from './js.js';
+import {
+    type CountOptions,
+    type Includeable,
+    Sequelize as SequelizeLib,
+    Transaction,
+} from 'sequelize';
 import {
     Association,
-    FindOptions,
-    IncludeOptions,
-    ModelAttributes,
+    type FindOptions,
+    type IncludeOptions,
+    type ModelAttributes,
     Op,
 } from 'sequelize';
 import { Model } from 'sequelize-typescript';
-import { Literal } from 'sequelize/types/utils';
-import { database } from '..';
-import { BaseModel, SaveOptions, Sequelize } from '../BaseModel';
+import type { Literal } from 'sequelize/types/utils';
+// type-only: a value import would close the BaseModel -> helpers ->
+// query -> BaseModel module cycle, which the synchronous require(esm)
+// path used by CommonJS consumers cannot evaluate
+import type { BaseModel, SaveOptions, Sequelize } from '../BaseModel.js';
 import {
     FieldsInput,
     FILTER_OPS,
@@ -41,11 +48,10 @@ import {
     OrderByInput,
     OrderDirection,
     PaginationInput,
-} from '../types';
-import { ModelAttributeColumnReferencesOptions } from 'sequelize/types/model';
+} from '../types/index.js';
+import type { ModelAttributeColumnReferencesOptions } from 'sequelize/types/model';
 
 export namespace query {
-
     const RX_OP = /^\$/;
     const RX_LIKE = /%/;
     const RX_LTE = /^<=/;
@@ -613,6 +619,12 @@ export namespace query {
         noAppend: boolean = false,
         doCommit: boolean = true,
     ): Promise<Partial<T>> {
+        // the package root is imported lazily at call time: a static import
+        // here would close a module cycle (index -> helpers -> index) that
+        // the synchronous require(esm) path used by CommonJS consumers
+        // cannot evaluate (bindings would stay undefined)
+        const { database } = await import('../index.js');
+
         transaction =
             transaction ||
             (await database().transaction({
@@ -1123,7 +1135,7 @@ export namespace query {
         str: TemplateStringsArray | string,
         ..._: any[]
     ): Literal {
-        return Sequelize.literal(str as string);
+        return SequelizeLib.literal(str as string);
     }
 
     /**

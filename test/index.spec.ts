@@ -26,7 +26,7 @@ import {
     Graph,
     NullableIndex,
     View,
-} from '..';
+} from '../index.js';
 
 describe('public API', () => {
     it('should expose the Graph class', () => {

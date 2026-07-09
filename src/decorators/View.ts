@@ -22,7 +22,7 @@
  * <support@imqueue.com> to get commercial licensing options.
  */
 import 'reflect-metadata';
-import { ModelOptions } from 'sequelize';
+import { type ModelOptions } from 'sequelize';
 import { addOptions, setModelName } from 'sequelize-typescript';
 
 export interface IViewDefineOptions extends ModelOptions {

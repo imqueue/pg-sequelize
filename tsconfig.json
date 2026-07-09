@@ -8,6 +8,7 @@
     "moduleResolution": "nodenext",
     "resolveJsonModule": true,
     "esModuleInterop": true,
+    "verbatimModuleSyntax": true,
 
     "types": ["node"],
 

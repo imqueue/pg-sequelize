@@ -21,6 +21,6 @@
  * purchase a proprietary commercial license. Please contact us at
  * <support@imqueue.com> to get commercial licensing options.
  */
-export * from './IRange';
-export * from './DateRange';
-export * from './NumericRange';
+export * from './IRange.js';
+export * from './DateRange.js';
+export * from './NumericRange.js';

@@ -21,7 +21,11 @@
  * purchase a proprietary commercial license. Please contact us at
  * <support@imqueue.com> to get commercial licensing options.
  */
-import { ColumnIndexOptions, FunctionType, ColumnIndex } from './ColumnIndex';
+import {
+    type ColumnIndexOptions,
+    type FunctionType,
+    ColumnIndex,
+} from './ColumnIndex.js';
 
 type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;
 

@@ -31,7 +31,7 @@
   "author": "imqueue.com <support@imqueue.com>",
   "license": "ISC",
   "dependencies": {
-    "@imqueue/rpc": "^3.1.1",
+    "@imqueue/rpc": "^3.2.0",
     "chalk": "^5.6.2",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
@@ -46,5 +46,16 @@
     "typescript": "^7.0.2"
   },
   "main": "index.js",
-  "types": "index.d.ts"
+  "types": "index.d.ts",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  }
 }

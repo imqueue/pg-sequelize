@@ -22,7 +22,7 @@
  * <support@imqueue.com> to get commercial licensing options.
  */
 import { property } from '@imqueue/rpc';
-import { IRange } from './IRange';
+import { type IRange } from './IRange.js';
 
 export class NumericRange implements IRange {
     @property('number')

@@ -15,20 +15,21 @@
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
-import { DEFAULT_IMQ_SERVICE_OPTIONS, ILogger } from '@imqueue/rpc';
+import { DEFAULT_IMQ_SERVICE_OPTIONS, type ILogger } from '@imqueue/rpc';
+import { createRequire } from 'module';
 import * as fs from 'fs';
 import chalk from 'chalk';
 import { resolve, sep } from 'path';
-import { SequelizeOptions } from 'sequelize-typescript';
-import { Sequelize } from './BaseModel';
-import { isDefined, isOk } from './helpers/js';
+import { type SequelizeOptions } from 'sequelize-typescript';
+import { Sequelize } from './BaseModel.js';
+import { isDefined, isOk } from './helpers/js.js';
 
 /* models exports! */
-export * from './Graph';
-export * from './BaseModel';
-export * from './helpers';
-export * from './decorators';
-export * from './types';
+export * from './Graph.js';
+export * from './BaseModel.js';
+export * from './helpers/index.js';
+export * from './decorators/index.js';
+export * from './types/index.js';
 
 const JS_EXT_RX = /\.js$/;
 
@@ -97,8 +98,7 @@ export const SQL_PRETTIFY = +(process.env.SQL_PRETTIFY || 0) > 0;
  */
 export const SQL_COLORIZE = +(process.env.SQL_COLORIZE || 0) > 0;
 
-// tslint:disable-next-line:no-var-requires
-const sqlFormatter = require('sql-formatter');
+import { format as sqlFormat } from 'sql-formatter';
 const RX_SQL_NUM_LAYOUT = /\s+(['"]?\d+['"]?,?)\r?\n/g;
 const RX_SQL_NUM_END = /(\d+['"]?)\s+(\))/g;
 const RX_BRK_DBL_AND = /&\s+&/g;
@@ -114,8 +114,7 @@ const RX_SQL_PREFIX = /Execut(ed|ing) \(default\):/;
  */
 export function formatSql(sql: string): string {
     return SQL_PRETTIFY
-        ? sqlFormatter
-              .format(sql)
+        ? sqlFormat(sql)
               .replace(RX_SQL_NUM_LAYOUT, '$1 ')
               .replace(RX_SQL_NUM_END, '$1$2')
               .replace(RX_BRK_DBL_AND, '&&')
@@ -193,12 +192,17 @@ export function database(options?: IMQORMOptions): Sequelize {
 
     orm = new Sequelize(options.connectionString as string, options.sequelize);
 
+    // model files are loaded synchronously with a CommonJS require
+    // scoped to this module: consumer model builds are CJS today, and
+    // require(esm) covers them if they migrate (Node >= 22.12)
+    const requireModel = createRequire(import.meta.url);
+
     orm.addModels(
         walk(resolve(options.modelsPath))
             .filter(name => JS_EXT_RX.test(name))
             .map(
                 filename =>
-                    require(filename)[
+                    requireModel(filename)[
                         filename.split(sep).reverse()[0].replace(JS_EXT_RX, '')
                     ],
             ),

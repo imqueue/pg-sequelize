@@ -21,10 +21,10 @@
  * purchase a proprietary commercial license. Please contact us at
  * <support@imqueue.com> to get commercial licensing options.
  */
-export * from './ranges';
-export * from './FieldsInput';
-export * from './FilterInput';
-export * from './PaginationInput';
-export * from './OrderByInput';
-export * from './JsonObject';
-export * from './DataPage';
+export * from './ranges/index.js';
+export * from './FieldsInput.js';
+export * from './FilterInput.js';
+export * from './PaginationInput.js';
+export * from './OrderByInput.js';
+export * from './JsonObject.js';
+export * from './DataPage.js';
