@@ -110,7 +110,7 @@ export namespace query {
     }
 
     // tslint:disable-next-line:max-line-length
-        /**
+    /**
      * SQL tag used to tag sql queries
      *
      * @param {string | TemplateStringsArray} sqlQuery
@@ -156,7 +156,7 @@ export namespace query {
         }, {});
     };
 
-        /**
+    /**
      * Omits non-related properties from a given fields map object associated
      * with the given model
      *
@@ -193,7 +193,7 @@ export namespace query {
         return list;
     }
 
-        /**
+    /**
      * Returns true if given fields contains associations from given model,
      * false otherwise
      *
@@ -562,7 +562,7 @@ export namespace query {
         return args;
     }
 
-        /**
+    /**
      * Recursively creates entity and all it's relations from a given input
      * using a given model.
      *
@@ -692,7 +692,7 @@ export namespace query {
         return entity;
     }
 
-        /**
+    /**
      * Builds and returns count query for a given query options and model.
      *
      * @param {Model} model
@@ -717,7 +717,7 @@ export namespace query {
         return queryOptions;
     }
 
-        /**
+    /**
      * Builds proper paging options query part
      *
      * @param {PaginationInput} [pageOptions] - obtained pagination input
@@ -774,7 +774,7 @@ export namespace query {
         }
     }
 
-        /**
+    /**
      * Constructs order by part of the query from a given input orderBy object
      *
      * @param {any} orderBy
@@ -804,7 +804,7 @@ export namespace query {
         return order;
     }
 
-        /**
+    /**
      * Adds or null check to a given where field values
      *
      * @param {string | string[]} value
@@ -1027,7 +1027,7 @@ export namespace query {
         return { [Op.or]: ops };
     }
 
-        /**
+    /**
      * Will apply a range rule on a given filters. The rule is simple. If
      * filter query contains fields named as [ColumnName]IRange it will try to
      * convert those fields to a proper range filter if the value is a proper
@@ -1076,7 +1076,7 @@ export namespace query {
         return filter;
     }
 
-        /**
+    /**
      * Looks up and returns include options in a given query using an array of
      * given models as a search path
      *
@@ -1147,7 +1147,7 @@ export namespace query {
         return 'NULL';
     }
 
-        /**
+    /**
      * Removes given properties from the given object
      *
      * @param {any} obj
@@ -1166,7 +1166,7 @@ export namespace query {
         return obj;
     }
 
-        /**
+    /**
      * Traverses given query object, lookups for includes matching
      * the given arguments of include options and overrides those are matching
      * by model and alias with the provided option.

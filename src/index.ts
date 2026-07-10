@@ -17,7 +17,7 @@
  */
 import { DEFAULT_IMQ_SERVICE_OPTIONS, type ILogger } from '@imqueue/rpc';
 import { createRequire } from 'module';
-import * as fs from 'fs';
+import { readdirSync, statSync } from 'fs';
 import chalk from 'chalk';
 import { resolve, sep } from 'path';
 import { type SequelizeOptions } from 'sequelize-typescript';
@@ -42,10 +42,10 @@ const JS_EXT_RX = /\.js$/;
 function walk(dir: string) {
     let results: string[] = [];
 
-    for (let file of fs.readdirSync(dir)) {
+    for (let file of readdirSync(dir)) {
         file = resolve(dir, file);
 
-        const stat = fs.statSync(file);
+        const stat = statSync(file);
 
         if (stat && stat.isDirectory()) {
             results = results.concat(walk(file));

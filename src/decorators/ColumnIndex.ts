@@ -26,7 +26,7 @@ import { addOptions, getOptions } from 'sequelize-typescript';
 export type FunctionType = (...args: any[]) => any;
 
 export enum IndexMethod {
-        BTREE = 'BTREE',
+    BTREE = 'BTREE',
     HASH = 'HASH',
     GIST = 'GIST',
     SPGIST = 'SPGIST',
@@ -35,7 +35,7 @@ export enum IndexMethod {
 }
 
 export enum SortOrder {
-        ASC = 'ASC',
+    ASC = 'ASC',
     DESC = 'DESC',
 }
 

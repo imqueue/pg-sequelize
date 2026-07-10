@@ -901,7 +901,7 @@ export class Sequelize extends SequelizeOrigin {
  */
 export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
-          * Override native drop method to add support of view drops
+     * Override native drop method to add support of view drops
      *
      * @param {DropOptions} options
      * @return {Promise<any>}
@@ -915,7 +915,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         return self.QueryInterface[method](self.getTableName(), options);
     }
 
-        /**
+    /**
      * Sync this Model to the DB, that is create the table. Upon success, the
      * callback will be called with the model instance (this).
      * Supports views.
@@ -1160,7 +1160,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         });
     }
 
-        /**
+    /**
      * Restores native serialization state, clearing returning options
      * saved during insert/update query execution
      *
@@ -1223,7 +1223,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         return serialized;
     }
 
-        /**
+    /**
      * Casts numeric types to numbers for this model if it
      * was not properly done during query selection and mapping.
      * This may occurs sometimes when dealing with Views
