@@ -32,7 +32,6 @@
   "license": "GPL-3.0-only",
   "dependencies": {
     "@imqueue/rpc": "^3.2.1",
-    "chalk": "^5.6.2",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "sequelize": "^6.37.8",

@@ -17,8 +17,8 @@
  */
 import { DEFAULT_IMQ_SERVICE_OPTIONS, type ILogger } from '@imqueue/rpc';
 import { createRequire } from 'node:module';
+import { styleText } from 'node:util';
 import { readdirSync, statSync } from 'node:fs';
-import chalk from 'chalk';
 import { resolve, sep } from 'node:path';
 import { type SequelizeOptions } from 'sequelize-typescript';
 import { Sequelize } from './BaseModel.js';
@@ -135,9 +135,10 @@ export function formatSql(sql: string): string {
 const logging = (logger: ILogger) => (sql: string, time?: number) =>
     logger.log(
         SQL_COLORIZE
-            ? `${(chalk.bold.yellow as (...args: any[]) => any)('SQL Query:')} ${(
-                  chalk.cyan as (...args: any[]) => any
-              )(formatSql(sql.replace(RX_SQL_PREFIX, '')))}`
+            ? `${styleText(['bold', 'yellow'], 'SQL Query:')} ${styleText(
+                  'cyan',
+                  formatSql(sql.replace(RX_SQL_PREFIX, '')),
+              )}`
             : `SQL Query: ${formatSql(sql.replace(RX_SQL_PREFIX, ''))}`,
         typeof time === 'number' ? `executed in ${time} ms` : '',
     );
