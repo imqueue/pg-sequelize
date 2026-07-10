@@ -312,25 +312,17 @@ export interface WithIncludeMap extends InitOptions {
     includeNames?: string[];
     parent: WithIncludeMap;
 }
-// noinspection JSUnusedGlobalSymbols
 export type IModelClass<T extends BaseModel<T>> = new () => T;
 
-// noinspection JSUnusedGlobalSymbols
 export type UpsertOptions = Modify<UpsertOptionsOrigin, ReturningOptions>;
-// noinspection JSUnusedGlobalSymbols
 export type BuildOptions = Modify<BuildOptionsOrigin, ReturningOptions>;
-// noinspection JSUnusedGlobalSymbols
 export type BulkCreateOptions = Modify<
     BulkCreateOptionsOrigin,
     ReturningOptions
 >;
-// noinspection JSUnusedGlobalSymbols
 export type QueryOptions = Modify<QueryOptionsOrigin, ReturningOptions>;
-// noinspection JSUnusedGlobalSymbols
 export type UpdateOptions = Modify<UpdateOptionsOrigin, ReturningOptions>;
-// noinspection JSUnusedGlobalSymbols
 export type CreateOptions = Modify<CreateOptionsOrigin, ReturningOptions>;
-// noinspection JSUnusedGlobalSymbols
 export type SaveOptions = Modify<InstanceSaveOptionsOrigin, ReturningOptions>;
 
 /**
@@ -754,7 +746,7 @@ export class Sequelize extends SequelizeOrigin {
      * @param {ModelOptions} [options]
      * @return {typeof BaseModel<TInstance>}
      */
-    public override define<TInstance, TAttributes>(
+    public override define<TInstance, _TAttributes>(
         modelName: string,
         attributes: ModelAttributes,
         options?: ModelOptions,
@@ -909,8 +901,7 @@ export class Sequelize extends SequelizeOrigin {
  */
 export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
-     // noinspection JSUnusedGlobalSymbols
-     * Override native drop method to add support of view drops
+          * Override native drop method to add support of view drops
      *
      * @param {DropOptions} options
      * @return {Promise<any>}
@@ -924,8 +915,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         return self.QueryInterface[method](self.getTableName(), options);
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Sync this Model to the DB, that is create the table. Upon success, the
      * callback will be called with the model instance (this).
      * Supports views.
@@ -1012,7 +1002,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      * @param {SyncOptions} options
      * @return {Promise<any>}
      */
-    public static syncIndices(options?: SyncOptions): Promise<any> {
+    public static syncIndices(_options?: SyncOptions): Promise<any> {
         const indices: {
             column: string;
             options: ColumnIndexOptions;
@@ -1170,8 +1160,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         });
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Restores native serialization state, clearing returning options
      * saved during insert/update query execution
      *
@@ -1234,8 +1223,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         return serialized;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Casts numeric types to numbers for this model if it
      * was not properly done during query selection and mapping.
      * This may occurs sometimes when dealing with Views

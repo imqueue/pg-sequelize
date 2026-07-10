@@ -29,7 +29,6 @@ export interface IViewDefineOptions extends ModelOptions {
     viewDefinition: string;
 }
 
-// noinspection JSUnusedGlobalSymbols
 /**
  * Decorator factory: @View
  *

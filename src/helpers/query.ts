@@ -40,7 +40,7 @@ import type { Literal } from 'sequelize/types/utils';
 // type-only: a value import would close the BaseModel -> helpers ->
 // query -> BaseModel module cycle, which the synchronous require(esm)
 // path used by CommonJS consumers cannot evaluate
-import type { BaseModel, SaveOptions, Sequelize } from '../BaseModel.js';
+import type { BaseModel, SaveOptions } from '../BaseModel.js';
 import {
     FieldsInput,
     FILTER_OPS,
@@ -65,12 +65,12 @@ export namespace query {
     const RX_SQL_END = /;?$/;
 
     interface PureDataFunction {
-        <M extends Model<M>, T>(
+        <_M extends Model<_M>, T>(
             model: typeof Model,
             input: T,
             attributes?: string[],
         ): ModelAttributes;
-        <M extends Model<M>, T>(
+        <_M extends Model<_M>, T>(
             model: typeof Model,
             input: T[],
             attributes?: string[],
@@ -110,8 +110,7 @@ export namespace query {
     }
 
     // tslint:disable-next-line:max-line-length
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * SQL tag used to tag sql queries
      *
      * @param {string | TemplateStringsArray} sqlQuery
@@ -120,7 +119,7 @@ export namespace query {
      */
     export function sql(
         sqlQuery: string | TemplateStringsArray,
-        ...rest: any[]
+        ..._rest: any[]
     ): string {
         return safeSqlSpaceCleanup(String(sqlQuery))
             .replace(RX_SQL_CLEAN, '')
@@ -135,7 +134,7 @@ export namespace query {
      * @param {string[]} [attributes]
      * @return {any}
      */
-    export const pureData: PureDataFunction = <T, M extends BaseModel<M>>(
+    export const pureData: PureDataFunction = <T, _M extends BaseModel<_M>>(
         model: typeof Model,
         input: T | T[],
         attributes?: string[],
@@ -157,8 +156,7 @@ export namespace query {
         }, {});
     };
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Omits non-related properties from a given fields map object associated
      * with the given model
      *
@@ -195,8 +193,7 @@ export namespace query {
         return list;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Returns true if given fields contains associations from given model,
      * false otherwise
      *
@@ -565,8 +562,7 @@ export namespace query {
         return args;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Recursively creates entity and all it's relations from a given input
      * using a given model.
      *
@@ -696,8 +692,7 @@ export namespace query {
         return entity;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Builds and returns count query for a given query options and model.
      *
      * @param {Model} model
@@ -722,15 +717,14 @@ export namespace query {
         return queryOptions;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Builds proper paging options query part
      *
      * @param {PaginationInput} [pageOptions] - obtained pagination input
      *                                          from remote
      * @return {FindOptions} - pagination part of the query
      */
-    export function toLimitOptions<T>(
+    export function toLimitOptions<_T>(
         pageOptions?: PaginationInput,
     ): FindOptions {
         const page: FindOptions = {};
@@ -780,13 +774,12 @@ export namespace query {
         }
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Constructs order by part of the query from a given input orderBy object
      *
      * @param {any} orderBy
      */
-    export function toOrderOptions<T>(orderBy?: OrderByInput): FindOptions {
+    export function toOrderOptions<_T>(orderBy?: OrderByInput): FindOptions {
         const order: FindOptions = {};
 
         if (!orderBy) {
@@ -811,8 +804,7 @@ export namespace query {
         return order;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Adds or null check to a given where field values
      *
      * @param {string | string[]} value
@@ -834,7 +826,7 @@ export namespace query {
      * @param {FilterInput} filter
      * @return {FindOptions}
      */
-    function parseFilter<T>(filter: FilterInput): FindOptions {
+    function parseFilter<_T>(filter: FilterInput): FindOptions {
         const clause: FindOptions = {};
 
         if (Object.prototype.toString.call(filter) === '[object Object]') {
@@ -863,7 +855,7 @@ export namespace query {
      * @param {any} data
      * @return {IFindOptions<T>>}
      */
-    function parseFilterValue<T>(prop: string, data: any): FindOptions {
+    function parseFilterValue<_T>(prop: string, data: any): FindOptions {
         const value: any = { [prop]: data };
 
         if (typeof data !== 'string') {
@@ -897,7 +889,7 @@ export namespace query {
             if (date.toISOString() === value) {
                 return date;
             }
-        } catch (err) {
+        } catch {
             /* not a date */
         }
 
@@ -1035,8 +1027,7 @@ export namespace query {
         return { [Op.or]: ops };
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Will apply a range rule on a given filters. The rule is simple. If
      * filter query contains fields named as [ColumnName]IRange it will try to
      * convert those fields to a proper range filter if the value is a proper
@@ -1085,8 +1076,7 @@ export namespace query {
         return filter;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Looks up and returns include options in a given query using an array of
      * given models as a search path
      *
@@ -1157,8 +1147,7 @@ export namespace query {
         return 'NULL';
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Removes given properties from the given object
      *
      * @param {any} obj
@@ -1177,8 +1166,7 @@ export namespace query {
         return obj;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Traverses given query object, lookups for includes matching
      * the given arguments of include options and overrides those are matching
      * by model and alias with the provided option.

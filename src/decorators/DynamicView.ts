@@ -39,7 +39,7 @@ export const MATCHER = '@\\{([a-z0-9_]+?)\\}';
 export const RX_MATCHER = new RegExp(MATCHER, 'gi');
 export const RX_NAME_MATCHER = new RegExp(MATCHER, 'i');
 
-// noinspection JSUnusedGlobalSymbols
+
 /**
  * Decorator factory: @View
  *

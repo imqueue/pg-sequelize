@@ -23,12 +23,11 @@
  */
 import 'reflect-metadata';
 
-// noinspection JSUnusedGlobalSymbols
 /**
  * Declares emittable model, which would have bound trigger sending
  * table rows change events using PostgreSQL NOTIFY command.
  * This is PostgreSQL only feature
  */
-export function Emittable(target: any) {
+export function Emittable(_target: any) {
     // todo: implement
 }

@@ -24,7 +24,6 @@
 import { currentMetadata } from '@imqueue/rpc';
 import { BeforeBulkCreate, BeforeCreate } from 'sequelize-typescript';
 
-// noinspection JSUnusedGlobalSymbols
 /**
  * Stamps the decorated column with the acting user id on INSERT, taken from the
  * in-flight IMQ request metadata (`currentMetadata()?.userId`) — so the id never

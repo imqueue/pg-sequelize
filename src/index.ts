@@ -144,7 +144,6 @@ const logging = (logger: ILogger) => (sql: string, time?: number) =>
 
 let orm: Sequelize;
 
-// noinspection JSUnusedGlobalSymbols
 /**
  * Initialized all known by this package database models and
  * returns instance of Sequelize, mapped with these models

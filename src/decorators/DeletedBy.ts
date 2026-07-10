@@ -24,7 +24,6 @@
 import { currentMetadata } from '@imqueue/rpc';
 import { BeforeBulkDestroy, BeforeBulkRestore } from 'sequelize-typescript';
 
-// noinspection JSUnusedGlobalSymbols
 /**
  * Stamps the decorated column with the acting user id on soft-delete (and clears
  * it on restore), taken from the in-flight IMQ request metadata

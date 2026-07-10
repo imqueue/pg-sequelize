@@ -69,8 +69,7 @@ export class Graph<T> {
         return this;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Removes vertices from a graph with all their edges
      *
      * @param {...any[]} vertex
@@ -104,8 +103,7 @@ export class Graph<T> {
         return this;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Removes given edges from a given vertex
      *
      * @param {any} fromVertex - target vertex to remove edges from
@@ -151,8 +149,7 @@ export class Graph<T> {
         return this.list.has(vertex);
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Performs DFS traversal over graph, executing on each step passed callback
      * function. If callback returns false - will stop traversal at that
      * step.
@@ -200,8 +197,7 @@ export class Graph<T> {
         return this;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Returns max possible path down the graph for a given vertex,
      * using DFS traversal over the path
      *
@@ -216,8 +212,7 @@ export class Graph<T> {
         return visited.keys();
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Returns true if graph has al least one cycled path in it,
      * false - otherwise
      *
@@ -236,8 +231,7 @@ export class Graph<T> {
         return false;
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    /**
+        /**
      * Returns list of vertices in this graph
      *
      * @return {IterableIterator<any>}

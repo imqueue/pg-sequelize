@@ -31,17 +31,14 @@ type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;
 
 export type NullableColumnIndexOptions = Omit<ColumnIndexOptions, 'expression'>;
 
-// noinspection JSUnusedGlobalSymbols
 export function NullableIndex(
     options: Partial<NullableColumnIndexOptions>,
 ): FunctionType;
-// noinspection JSUnusedGlobalSymbols
 export function NullableIndex(
     target: any,
     propertyName: string,
     propertyDescriptor?: PropertyDescriptor,
 ): void;
-// noinspection JSUnusedGlobalSymbols
 export function NullableIndex(...args: any[]): FunctionType | void {
     if (args.length >= 2) {
         const [target, propertyName, propertyDescriptor] = args;
