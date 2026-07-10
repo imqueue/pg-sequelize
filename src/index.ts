@@ -16,10 +16,10 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 import { DEFAULT_IMQ_SERVICE_OPTIONS, type ILogger } from '@imqueue/rpc';
-import { createRequire } from 'module';
-import { readdirSync, statSync } from 'fs';
+import { createRequire } from 'node:module';
+import { readdirSync, statSync } from 'node:fs';
 import chalk from 'chalk';
-import { resolve, sep } from 'path';
+import { resolve, sep } from 'node:path';
 import { type SequelizeOptions } from 'sequelize-typescript';
 import { Sequelize } from './BaseModel.js';
 import { isDefined, isOk } from './helpers/js.js';
