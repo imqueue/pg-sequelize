@@ -21,6 +21,9 @@
  * purchase a proprietary commercial license. Please contact us at
  * <support@imqueue.com> to get commercial licensing options.
  */
+export * from './CreatedBy.js';
+export * from './UpdatedBy.js';
+export * from './DeletedBy.js';
 export * from './DynamicView.js';
 export * from './View.js';
 export * from './NullableIndex.js';
