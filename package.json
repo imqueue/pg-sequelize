@@ -27,7 +27,7 @@
   "bugs": {
     "url": "https://github.com/imqueue/sequelize/issues"
   },
-  "homepage": "https://github.com/imqueue/sequelize",
+  "homepage": "https://imqueue.org/",
   "author": "imqueue.com <support@imqueue.com>",
   "license": "GPL-3.0-only",
   "dependencies": {
