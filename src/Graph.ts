@@ -23,8 +23,6 @@
  */
 /**
  * Graph internal storage data type
- *
- * @type {Map<any, any>}
  */
 export type GraphMap<T> = Map<T, T[]>;
 
@@ -33,8 +31,6 @@ export type GraphMap<T> = Map<T, T[]>;
  * vertex as a first argument - is a vertex on iteration visit, and a map
  * of visited vertices as a second argument.
  * If this callback returns false value it will break iteration cycle.
- *
- * @type {(vertex: T, visited: Map<T, boolean>): false | void}
  */
 export type GraphForeachCallback<T> = (
     vertex: T,
@@ -49,17 +45,13 @@ export type GraphForeachCallback<T> = (
 export class Graph<T> {
     /**
      * Internal graph data storage
-     *
-     * @access private
-     * @type {GraphMap<any>}
      */
     private list: GraphMap<T> = new Map<T, T[]>();
 
     /**
      * Adds vertices to graph
      *
-     * @param {...any[]} vertex - vertices to add
-     * @return {Graph<any>}
+     * @param vertex - vertices to add
      */
     public addVertex(...vertex: T[]): Graph<T> {
         for (const v of vertex) {
@@ -72,8 +64,7 @@ export class Graph<T> {
     /**
      * Removes vertices from a graph with all their edges
      *
-     * @param {...any[]} vertex
-     * @return {Graph<any>}
+     * @param vertex
      */
     public delVertex(...vertex: T[]): Graph<T> {
         for (const v of vertex) {
@@ -86,9 +77,8 @@ export class Graph<T> {
     /**
      * Adds an edges to a given vertex
      *
-     * @param {any} fromVertex
-     * @param {...any[]} toVertex
-     * @return {Graph<any>}
+     * @param fromVertex
+     * @param toVertex
      */
     public addEdge(fromVertex: T, ...toVertex: T[]): Graph<T> {
         let edges = this.list.get(fromVertex);
@@ -106,9 +96,8 @@ export class Graph<T> {
     /**
      * Removes given edges from a given vertex
      *
-     * @param {any} fromVertex - target vertex to remove edges from
-     * @param {...any[]} toVertex - edges to remove
-     * @return {Graph<any>}
+     * @param fromVertex - target vertex to remove edges from
+     * @param toVertex - edges to remove
      */
     public delEdge(fromVertex: T, ...toVertex: T[]): Graph<T> {
         const edges = this.list.get(fromVertex);
@@ -130,9 +119,8 @@ export class Graph<T> {
      * Checks if a given vertex has given edge, returns true if has, false -
      * otherwise
      *
-     * @param {any} vertex
-     * @param {any} edge
-     * @return {boolean}
+     * @param vertex
+     * @param edge
      */
     public hasEdge(vertex: T, edge: T): boolean {
         return !!~(this.list.get(vertex) || []).indexOf(edge);
@@ -142,8 +130,7 @@ export class Graph<T> {
      * Checks if this graph contains given vertex, returns true if contains,
      * false - otherwise
      *
-     * @param {any} vertex
-     * @return {boolean}
+     * @param vertex
      */
     public hasVertex(vertex: T): boolean {
         return this.list.has(vertex);
@@ -154,8 +141,7 @@ export class Graph<T> {
      * function. If callback returns false - will stop traversal at that
      * step.
      *
-     * @param {GraphForeachCallback<any>} callback
-     * @return {Graph<any>}
+     * @param callback
      */
     public forEach(callback: GraphForeachCallback<T>): Graph<T> {
         const visited = new Map<T, boolean>();
@@ -172,10 +158,9 @@ export class Graph<T> {
      * graph path is end for that vertex. So, literally, it performs
      * walking through a possible path down the staring vertex in a graph.
      *
-     * @param {any} vertex
-     * @param {GraphForeachCallback<any>} callback
-     * @param {Map<any, boolean>()} visited
-     * @return {Graph<any>}
+     * @param vertex
+     * @param callback
+     * @param visited
      */
     public walk(
         vertex: T,
@@ -201,8 +186,7 @@ export class Graph<T> {
      * Returns max possible path down the graph for a given vertex,
      * using DFS traversal over the path
      *
-     * @param {any} vertex
-     * @return {IterableIterator<any>}
+     * @param vertex
      */
     public path(vertex: T): IterableIterator<T> {
         const visited = new Map<T, boolean>();
@@ -215,8 +199,6 @@ export class Graph<T> {
     /**
      * Returns true if graph has al least one cycled path in it,
      * false - otherwise
-     *
-     * @return {boolean}
      */
     public isCycled(): boolean {
         const visited = new Map<T, boolean>();
@@ -233,8 +215,6 @@ export class Graph<T> {
 
     /**
      * Returns list of vertices in this graph
-     *
-     * @return {IterableIterator<any>}
      */
     public vertices(): IterableIterator<T> {
         return this.list.keys();
@@ -244,10 +224,9 @@ export class Graph<T> {
      * Performs recursive cycles detection on a graph.
      * Private method. If you need to detect cycles, use isCycled() instead.
      *
-     * @access private
-     * @param {any} vertex
-     * @param {Map<any, boolean>} visited
-     * @param {Map<any, boolean>} stack
+     * @param vertex
+     * @param visited
+     * @param stack
      */
     private detectCycle(
         vertex: T,

@@ -25,8 +25,7 @@
 /**
  * Returns true if a given value is not undefined or null, false otherwise
  *
- * @param {any} value
- * @return {boolean}
+ * @param value
  */
 export function isDefined(value: any): boolean {
     return typeof value !== 'undefined' && value !== null;
@@ -35,8 +34,7 @@ export function isDefined(value: any): boolean {
 /**
  * Returns true if a given value is defined and is truthy
  *
- * @param {any} value
- * @return {boolean}
+ * @param value
  */
 export function isOk(value: any): boolean {
     return !!(isDefined(value) && value);
@@ -46,8 +44,7 @@ export function isOk(value: any): boolean {
  * Returns true if a given value is object-like (arrays included,
  * functions excluded)
  *
- * @param {any} obj
- * @return {boolean}
+ * @param obj
  */
 export function isObject(obj: any): boolean {
     return typeof obj !== 'function' && Object(obj) === obj;
@@ -56,8 +53,7 @@ export function isObject(obj: any): boolean {
 /**
  * Checks if a given value is Array
  *
- * @param {any} value
- * @return {boolean}
+ * @param value
  */
 export function isArray(value: any): boolean {
     return Array.isArray(value);
@@ -67,8 +63,7 @@ export function isArray(value: any): boolean {
  * Returns true if a given value is null, undefined, serializes to an empty
  * string or is an object without own enumerable keys
  *
- * @param {any} value
- * @return {boolean}
+ * @param value
  */
 export function isEmpty(value: any): boolean {
     return (
@@ -82,8 +77,7 @@ export function isEmpty(value: any): boolean {
  * Recursively checks if property contains value.
  * If no - it will be deleted from object
  *
- * @param {any} obj
- * @returns {boolean}
+ * @param obj
  */
 export function clearObject(obj: any): boolean {
     let empty = true;

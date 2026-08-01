@@ -39,7 +39,7 @@ import { BeforeBulkDestroy, BeforeBulkRestore } from 'sequelize-typescript';
  * does the inverse, clearing it as `deletedAt` is cleared.
  *
  * The sibling UPDATE runs on `this` — the concrete model the hook fires for,
- * bound by Sequelize at call time (`runHooks` -> `hook.apply(model, ...)`) —
+ * bound by Sequelize at call time (`runHooks` → `hook.apply(model, ...)`) —
  * rather than the class captured at decoration time. That lets the decorator be
  * declared on an abstract base model (e.g. a shared `BaseParanoid`) and still
  * resolve to the real subclass; the captured constructor would be the
@@ -50,9 +50,8 @@ import { BeforeBulkDestroy, BeforeBulkRestore } from 'sequelize-typescript';
  * delete writes exactly `deletedBy` + `deletedAt` (like the native paranoid
  * delete writes only `deletedAt`). No-op when there is no acting user.
  *
- * @param {any} target - the decorated model's prototype
- * @param {string} propertyName - the decorated column property name
- * @return {void}
+ * @param target - the decorated model's prototype
+ * @param propertyName - the decorated column property name
  */
 export function DeletedBy(target: any, propertyName: string): void {
     const ctor = target.constructor;

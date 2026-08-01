@@ -363,7 +363,7 @@ function fixReturningOptions(options?: ReturningOptions) {
 /**
  * Overrides queryInterface behavior to add support of views definition
  *
- * @param {QueryInterface} queryInterface
+ * @param queryInterface
  */
 function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
     const {
@@ -533,8 +533,8 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
     /**
      * Drops view from database
      *
-     * @param {string} viewName - view name to drop
-     * @param {DropOptions} [options] - drop operation options
+     * @param viewName - view name to drop
+     * @param options - drop operation options
      */
     (queryInterface as QueryInterface).dropView = function (
         viewName: string,
@@ -551,8 +551,8 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
      * Creates view in a database. Makes sure given view name corresponds to
      * the name inside given create SQL query.
      *
-     * @param {string} viewName - view name to create
-     * @param {string} viewDefinition - raw sql query to create the view
+     * @param viewName - view name to create
+     * @param viewDefinition - raw sql query to create the view
      */
     (queryInterface as QueryInterface).createView = function (
         viewName: string,
@@ -723,8 +723,6 @@ export class Sequelize extends SequelizeOrigin {
     /**
      * Returns an instance of QueryInterface.
      * Supports views.
-     *
-     * @return {QueryInterface}
      */
     public override getQueryInterface(): QueryInterface {
         const self: any = this;
@@ -741,10 +739,9 @@ export class Sequelize extends SequelizeOrigin {
     /**
      * Overrides original sequelize define method. Supports views.
      *
-     * @param {string} modelName
-     * @param {ModelAttributes} attributes
-     * @param {ModelOptions} [options]
-     * @return {typeof BaseModel<TInstance>}
+     * @param modelName
+     * @param attributes
+     * @param options
      */
     public override define<TInstance, _TAttributes>(
         modelName: string,
@@ -766,8 +763,7 @@ export class Sequelize extends SequelizeOrigin {
     /**
      * Sync all defined models to the DB. Including views!
      *
-     * @param {SyncOptions} [options]
-     * @return {Promise<any>}
+     * @param options
      */
     public override sync(options?: SyncOptions): Promise<any> {
         const withViews = !options || (options && !options.withNoViews);
@@ -786,8 +782,7 @@ export class Sequelize extends SequelizeOrigin {
     /**
      * Synchronizes indices defined for models
      *
-     * @param {SyncOptions} options
-     * @return {Promise<any>}
+     * @param options
      */
     public syncIndices(options?: SyncOptions): Promise<any> {
         return Promise.all(
@@ -799,8 +794,6 @@ export class Sequelize extends SequelizeOrigin {
 
     /**
      * Syncs all defined views to the DB.
-     *
-     * @return {Promise<any>}
      */
     public syncViews(options?: SyncOptions): Promise<any> {
         const views = this.getViews();
@@ -827,8 +820,6 @@ export class Sequelize extends SequelizeOrigin {
 
     /**
      * Returns list of all defined as views models.
-     *
-     * @return {Array<typeof BaseModel>}
      */
     public getViews(): (typeof BaseModel)[] {
         const views: (typeof BaseModel)[] = [];
@@ -843,11 +834,11 @@ export class Sequelize extends SequelizeOrigin {
     }
 
     /**
-     * Overriding native query() method to support { returning: string[] }
+     * Overriding native query() method to support `{ returning: string[] }`
      * option for queries in a proper way
      *
-     * @param {string | { query: string, values: any[] }} sqlQuery
-     * @param {QueryOptions} options
+     * @param sqlQuery
+     * @param options
      */
     public override query(
         sqlQuery: string | { query: string; values: any[] },
@@ -903,8 +894,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
      * Override native drop method to add support of view drops
      *
-     * @param {DropOptions} options
-     * @return {Promise<any>}
+     * @param options
      */
     public static override drop(options?: DropOptions): Promise<any> {
         const self: any = this;
@@ -920,7 +910,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      * callback will be called with the model instance (this).
      * Supports views.
      *
-     * @param {SyncOptions} [options]
+     * @param options
      */
     public static override sync(options?: SyncOptions): Promise<any> {
         if ((this as any).options && (this as any).options.treatAsView) {
@@ -934,8 +924,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
      * Syncs view to the DB.
      *
-     * @param {SyncOptions} [options]
-     * @return {Promise<any>}
+     * @param options
      */
     public static syncView(options?: SyncOptions): Promise<any> {
         const self: any = this;
@@ -962,9 +951,8 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
      * Returns view definition SQL string.
      *
-     * @param {ViewParams} [viewParams]
-     * @param {boolean} [asQuery]
-     * @return {string}
+     * @param viewParams
+     * @param asQuery
      */
     public static getViewDefinition(
         viewParams: ViewParams = {},
@@ -999,8 +987,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
      * Synchronizes configured indices on this model
      *
-     * @param {SyncOptions} options
-     * @return {Promise<any>}
+     * @param options
      */
     public static syncIndices(_options?: SyncOptions): Promise<any> {
         const indices: {
@@ -1024,10 +1011,9 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      * column and options. Position is used for auto index naming when
      * index name is auto-generated
      *
-     * @param {string} column
-     * @param {ColumnIndexOptions} options
-     * @param {number} position
-     * @return {Promise<any>}
+     * @param column
+     * @param options
+     * @param position
      */
     public static syncIndex(
         column: string,
@@ -1086,7 +1072,9 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
      * Search for multiple instances.
      *
-     * @see {Sequelize#query}
+     * @remarks
+     * Delegates to Sequelize's own `findAll`, then re-maps numeric columns, which
+     * a view returns as strings.
      */
     public static override findAll<M>(options?: FindOptions): Promise<M[]> {
         const method = super.findAll;
@@ -1163,8 +1151,6 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
      * Restores native serialization state, clearing returning options
      * saved during insert/update query execution
-     *
-     * @return {BaseModel}
      */
     public restoreSerialization() {
         // noinspection TypeScriptUnresolvedVariable
@@ -1176,9 +1162,8 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
      * Appends child node to this entity as if it was joined through query
      *
-     * @param {string} name
-     * @param {any} data
-     * @return {BaseModel}
+     * @param name
+     * @param data
      */
     public appendChild(name: string, data: any) {
         // noinspection TypeScriptUnresolvedVariable
@@ -1227,8 +1212,6 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      * Casts numeric types to numbers for this model if it
      * was not properly done during query selection and mapping.
      * This may occurs sometimes when dealing with Views
-     *
-     * @return {BaseModel}
      */
     public fixNumbers(): BaseModel<T> {
         const model = this.sequelize.models[
@@ -1258,9 +1241,8 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
      * Makes sure given property properly serialized
      *
-     * @access private
-     * @param {string} prop
-     * @param {any} serialized
+     * @param prop
+     * @param serialized
      */
     private verifyProperty(prop: string, serialized: any) {
         // add more skipping props if needed...
@@ -1282,10 +1264,9 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
      * Makes sure given array property properly serialized
      *
-     * @access private
-     * @param {Array<any>} arr
-     * @param {string} prop
-     * @param {any} serialized
+     * @param arr
+     * @param prop
+     * @param serialized
      */
     private verifyArray(arr: any[], prop: string, serialized: any) {
         if (!serialized[prop]) {
@@ -1311,8 +1292,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      * This would allow to traverse model association paths and detect
      * cycles.
      *
-     * @param {Graph<typeof BaseModel>} [graph]
-     * @return {Graph<typeof BaseModel>}
+     * @param graph
      */
     public static toGraph(
         graph = new Graph<typeof BaseModel>(),

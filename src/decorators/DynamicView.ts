@@ -40,16 +40,16 @@ export const RX_MATCHER = new RegExp(MATCHER, 'gi');
 export const RX_NAME_MATCHER = new RegExp(MATCHER, 'i');
 
 /**
- * Decorator factory: @View
+ * Decorator factory: `@View`
  *
  * Adding view support for sequelize models, making sure views
  * could be defined in a safe way without a problems with sync/drop ops, etc.
- * This decorator simply annotate a model entity the same way @Table does,
+ * This decorator simply annotate a model entity the same way `@Table` does,
  * adding extra option "treatAsView" which is utilized by a BaseModel
  * class to override native behavior of sequelize models.
  *
- * @param {IViewDefineOptions | string} options - view definition options
- * @return {() => any} - view annotation decorator
+ * @param options - view definition options
+ * @returns view annotation decorator
  */
 export function DynamicView(options: IDynamicViewDefineOptions) {
     if (!options || !options.viewDefinition.trim()) {
@@ -80,8 +80,8 @@ export function DynamicView(options: IDynamicViewDefineOptions) {
 /**
  * Does the job to define the view table
  *
- * @param {any} target - model class
- * @param {IViewDefineOptions} options - view definition options
+ * @param target - model class
+ * @param options - view definition options
  */
 function annotate(target: any, options: IViewDefineOptions): void {
     Object.assign(options, { treatAsView: true });

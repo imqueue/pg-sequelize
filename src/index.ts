@@ -36,8 +36,7 @@ const JS_EXT_RX = /\.js$/;
 /**
  * Returns all files list from a given directory
  *
- * @param {string} dir
- * @return {string[]}
+ * @param dir
  */
 function walk(dir: string) {
     let results: string[] = [];
@@ -60,13 +59,6 @@ function walk(dir: string) {
 /**
  * ORM database() configuration options. Database connection string
  * can be provided explicitly or by setting DB_CONN_STR environment variable.
- *
- * @type {{
- *  logger: ILogger,
- *  connectionString: string,
- *  sequelize: SequelizeOptions,
- *  modelsPath: string
- * }} IMQORMOptions
  */
 export interface IMQORMOptions {
     logger: ILogger;
@@ -77,24 +69,18 @@ export interface IMQORMOptions {
 
 /**
  * Database connection string from environment variable
- *
- * @type {string}
  */
 export const DB_CONN_STR = process.env.DB_CONN_STR;
 
 /**
  * SQL prettify flag. Can be set by environment variable
  * SQL_PRETTIFY = 1|0. By default is false.
- *
- * @type {boolean}
  */
 export const SQL_PRETTIFY = +(process.env.SQL_PRETTIFY || 0) > 0;
 
 /**
  * SQL colorize flag. Can be set by environment variable
  * SQL_COLORIZE = 1|0. By default is false.
- *
- * @type {boolean}
  */
 export const SQL_COLORIZE = +(process.env.SQL_COLORIZE || 0) > 0;
 
@@ -109,8 +95,7 @@ const RX_SQL_PREFIX = /Execut(ed|ing) \(default\):/;
 /**
  * Returns pretty formatted SQL string of the given input SQL string
  *
- * @param {string} sql
- * @return {string}
+ * @param sql
  */
 export function formatSql(sql: string): string {
     return SQL_PRETTIFY
@@ -129,8 +114,7 @@ export function formatSql(sql: string): string {
  * taking into account configured SQL_PRETTIFY, SQL_COLORIZE environment
  * variables options.
  *
- * @param {ILogger} logger
- * @return {(sql: string, time: number) => string}
+ * @param logger
  */
 const logging = (logger: ILogger) => (sql: string, time?: number) =>
     logger.log(
@@ -149,8 +133,7 @@ let orm: Sequelize;
  * Initialized all known by this package database models and
  * returns instance of Sequelize, mapped with these models
  *
- * @param {IMQORMOptions} [options]
- * @return {Sequelize}
+ * @param options
  */
 export function database(options?: IMQORMOptions): Sequelize {
     if (typeof orm !== 'undefined') {

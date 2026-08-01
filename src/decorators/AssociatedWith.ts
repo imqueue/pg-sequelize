@@ -31,7 +31,7 @@ export interface IAssociated {
  * Defines property for build association between filter
  * fields and specific model
  *
- * @param {IAssociated} association - input data
+ * @param association - input data
  */
 export function AssociatedWith(cb: () => IAssociated) {
     return (target: any, key: string) => {

@@ -30,17 +30,17 @@ export interface IViewDefineOptions extends ModelOptions {
 }
 
 /**
- * Decorator factory: @View
+ * Decorator factory: `@View`
  *
  * Adding view support for sequelize models, making sure views
  * could be defined in a safe way without a problems with sync/drop ops,
  * etc.
- * This decorator simply annotate a model entity the same way @Table does,
+ * This decorator simply annotate a model entity the same way `@Table` does,
  * adding extra option "treatAsView" which is utilized by a BaseModel
  * class to override native behavior of sequelize models.
  *
- * @param {IViewDefineOptions | string} options - view definition options
- * @return {(...args: any[] => any)} - view annotation decorator
+ * @param options - view definition options
+ * @returns view annotation decorator
  */
 export function View(options: IViewDefineOptions | string) {
     if (typeof options === 'string') {
@@ -55,8 +55,8 @@ export function View(options: IViewDefineOptions | string) {
 /**
  * Does the job to define the view table
  *
- * @param {any} target - model class
- * @param {IViewDefineOptions} options - view definition options
+ * @param target - model class
+ * @param options - view definition options
  */
 function annotate(target: any, options: IViewDefineOptions): void {
     Object.assign(options, { treatAsView: true });

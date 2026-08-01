@@ -34,8 +34,8 @@ import { BeforeBulkCreate, BeforeCreate } from 'sequelize-typescript';
  * value the application set explicitly.
  *
  * Two hooks are registered, because rows are inserted in two ways:
- *  - instance / single `create()`         -> `beforeCreate` (receives the instance)
- *  - static `Model.bulkCreate(records, …)` -> `beforeBulkCreate` (receives the
+ *  - instance / single `create()`         → `beforeCreate` (receives the instance)
+ *  - static `Model.bulkCreate(records, …)` → `beforeBulkCreate` (receives the
  *    built instances; a plain `bulkCreate` does not fire `beforeCreate`, so the
  *    per-instance hook alone would be bypassed). Sequelize filters the written
  *    columns down to `options.fields` when the caller supplies it, so an injected
@@ -47,9 +47,8 @@ import { BeforeBulkCreate, BeforeCreate } from 'sequelize-typescript';
  * `@BeforeCreate` / `@BeforeBulkCreate`. Hooks are installed by
  * sequelize-typescript's `installHooks` during `Sequelize#addModels`.
  *
- * @param {any} target - the decorated model's prototype
- * @param {string} propertyName - the decorated column property name
- * @return {void}
+ * @param target - the decorated model's prototype
+ * @param propertyName - the decorated column property name
  */
 export function CreatedBy(target: any, propertyName: string): void {
     const ctor = target.constructor;
