@@ -22,15 +22,19 @@
  * <support@imqueue.com> to get commercial licensing options.
  */
 /**
- * Graph internal storage data type
+ * A graph as adjacency lists: each vertex mapped to the vertices it points at.
  */
 export type GraphMap<T> = Map<T, T[]>;
 
 /**
- * Callback type used on graph traversal iterations steps. It will obtain
- * vertex as a first argument - is a vertex on iteration visit, and a map
- * of visited vertices as a second argument.
- * If this callback returns false value it will break iteration cycle.
+ * Called once per vertex during a traversal.
+ *
+ * @remarks
+ * Returning `false` prunes the walk at that vertex — its own edges are not
+ * followed — rather than ending the traversal. Anything else, `undefined`
+ * included, carries on. The second argument is the live visited map, so a
+ * callback can see what has already been reached, and add to it to steer the
+ * walk away from a vertex it does not want visited.
  */
 export type GraphForeachCallback<T> = (
     vertex: T,
@@ -38,20 +42,45 @@ export type GraphForeachCallback<T> = (
 ) => false | void;
 
 /**
- * Class Graph
- * Simple undirected, unweighted graph data structure implementation
- * with DFS (depth-first search traversal implementation)
+ * A directed, unweighted graph with depth-first traversal and cycle detection.
+ *
+ * @remarks
+ * Small on purpose. It exists so model associations can be walked as a graph —
+ * `BaseModel.toGraph()` builds one — and the question worth asking of that graph is
+ * whether it has a cycle, because a cycle is a chain of `include`s that can be asked
+ * to include itself.
+ *
+ * Directed, despite what this said for a long time: an edge is recorded only on the
+ * vertex it starts from, so `addEdge(a, b)` does not make `hasEdge(b, a)` true. The
+ * cycle detection is the standard directed-graph one, with a recursion stack
+ * alongside the visited set, and it would be wrong for an undirected graph.
+ *
+ * Vertices are used as `Map` keys, so identity is what distinguishes them — model
+ * classes work, structurally equal objects do not.
+ *
+ * @example
+ * ```typescript
+ * const graph = Lead.toGraph();
+ *
+ * if (graph.isCycled()) {
+ *     // some association path leads back to where it started
+ * }
+ * ```
  */
 export class Graph<T> {
-    /**
-     * Internal graph data storage
-     */
+    /** The adjacency lists backing this graph. */
     private list: GraphMap<T> = new Map<T, T[]>();
 
     /**
-     * Adds vertices to graph
+     * Adds vertices with no edges.
      *
-     * @param vertex - vertices to add
+     * @remarks
+     * Not idempotent: a vertex that is already present has its edges RESET, so guard
+     * with {@link Graph.hasVertex} when a vertex may already be there. Adding an edge
+     * from an unknown vertex adds it for you, which is the usual way one appears.
+     *
+     * @param vertex - Vertices to add.
+     * @returns This graph, for chaining.
      */
     public addVertex(...vertex: T[]): Graph<T> {
         for (const v of vertex) {
@@ -62,9 +91,15 @@ export class Graph<T> {
     }
 
     /**
-     * Removes vertices from a graph with all their edges
+     * Removes vertices along with the edges leading out of them.
      *
-     * @param vertex
+     * @remarks
+     * Edges pointing AT a removed vertex are left behind, so other vertices can go on
+     * naming one that is gone — and a walk that follows such an edge simply finds no
+     * further edges rather than failing.
+     *
+     * @param vertex - Vertices to remove.
+     * @returns This graph, for chaining.
      */
     public delVertex(...vertex: T[]): Graph<T> {
         for (const v of vertex) {
@@ -75,10 +110,16 @@ export class Graph<T> {
     }
 
     /**
-     * Adds an edges to a given vertex
+     * Adds edges from one vertex to others.
      *
-     * @param fromVertex
-     * @param toVertex
+     * @remarks
+     * Directed: only `fromVertex` records them. It is added to the graph first if it
+     * is not there yet, while the targets are not — an edge may point at a vertex the
+     * graph does not otherwise know. Duplicate edges are kept as duplicates.
+     *
+     * @param fromVertex - Vertex the edges start from.
+     * @param toVertex - Vertices they point at.
+     * @returns This graph, for chaining.
      */
     public addEdge(fromVertex: T, ...toVertex: T[]): Graph<T> {
         let edges = this.list.get(fromVertex);
@@ -94,10 +135,15 @@ export class Graph<T> {
     }
 
     /**
-     * Removes given edges from a given vertex
+     * Removes edges from one vertex to others.
      *
-     * @param fromVertex - target vertex to remove edges from
-     * @param toVertex - edges to remove
+     * @remarks
+     * Every occurrence of each target is removed, so a duplicated edge goes entirely.
+     * A vertex with no edges, or one that is not in the graph, is left alone.
+     *
+     * @param fromVertex - Vertex to remove edges from.
+     * @param toVertex - Vertices to stop pointing at.
+     * @returns This graph, for chaining.
      */
     public delEdge(fromVertex: T, ...toVertex: T[]): Graph<T> {
         const edges = this.list.get(fromVertex);
@@ -116,32 +162,46 @@ export class Graph<T> {
     }
 
     /**
-     * Checks if a given vertex has given edge, returns true if has, false -
-     * otherwise
+     * Whether one vertex points at another.
      *
-     * @param vertex
-     * @param edge
+     * @remarks
+     * Directed, so the order of the arguments matters: this asks about an edge from
+     * `vertex` to `edge` and says nothing about the other direction.
+     *
+     * @param vertex - Vertex the edge would start from.
+     * @param edge - Vertex it would point at.
+     * @returns `true` when that edge is present.
      */
     public hasEdge(vertex: T, edge: T): boolean {
         return !!~(this.list.get(vertex) || []).indexOf(edge);
     }
 
     /**
-     * Checks if this graph contains given vertex, returns true if contains,
-     * false - otherwise
+     * Whether a vertex is in this graph.
      *
-     * @param vertex
+     * @remarks
+     * By identity, since vertices are `Map` keys. A vertex that is only pointed at by
+     * an edge and never added is not in the graph.
+     *
+     * @param vertex - Vertex to look for.
+     * @returns `true` when the graph holds it.
      */
     public hasVertex(vertex: T): boolean {
         return this.list.has(vertex);
     }
 
     /**
-     * Performs DFS traversal over graph, executing on each step passed callback
-     * function. If callback returns false - will stop traversal at that
-     * step.
+     * Visits every vertex once, depth first.
      *
-     * @param callback
+     * @remarks
+     * Walks from each vertex in turn, sharing one visited set across all of them — so
+     * the callback sees each vertex exactly once no matter how many paths reach it,
+     * and a disconnected part of the graph is covered too. A callback returning
+     * `false` prunes that branch; the traversal moves on to the next vertex rather
+     * than stopping.
+     *
+     * @param callback - Called once per vertex.
+     * @returns This graph, for chaining.
      */
     public forEach(callback: GraphForeachCallback<T>): Graph<T> {
         const visited = new Map<T, boolean>();
@@ -154,13 +214,18 @@ export class Graph<T> {
     }
 
     /**
-     * Performs DFS walk over graph staring from given vertex, unless
-     * graph path is end for that vertex. So, literally, it performs
-     * walking through a possible path down the staring vertex in a graph.
+     * Walks depth first from one vertex.
      *
-     * @param vertex
-     * @param callback
-     * @param visited
+     * @remarks
+     * Follows edges as far as they go, marking each vertex as it arrives and never
+     * arriving twice, which is what makes it safe on a cyclic graph. Passing a visited
+     * map of your own both continues an earlier walk and lets you exclude vertices by
+     * marking them before starting.
+     *
+     * @param vertex - Vertex to start from.
+     * @param callback - Called once per vertex reached; returning `false` prunes.
+     * @param visited - Vertices already reached. A fresh map by default.
+     * @returns This graph, for chaining.
      */
     public walk(
         vertex: T,
@@ -183,10 +248,16 @@ export class Graph<T> {
     }
 
     /**
-     * Returns max possible path down the graph for a given vertex,
-     * using DFS traversal over the path
+     * Every vertex reachable from one vertex, in the order a depth-first walk finds
+     * them.
      *
-     * @param vertex
+     * @remarks
+     * The reachable SET, not the longest path — each vertex appears once however many
+     * routes lead to it, and the starting vertex is the first entry. Reading it as a
+     * path is what makes a cyclic graph look as though it terminates.
+     *
+     * @param vertex - Vertex to start from.
+     * @returns An iterator over the reachable vertices.
      */
     public path(vertex: T): IterableIterator<T> {
         const visited = new Map<T, boolean>();
@@ -197,8 +268,14 @@ export class Graph<T> {
     }
 
     /**
-     * Returns true if graph has al least one cycled path in it,
-     * false - otherwise
+     * Whether any path in this graph leads back to where it started.
+     *
+     * @remarks
+     * Checks from every vertex, so a cycle in a part of the graph nothing else reaches
+     * is still found. A self-edge counts. For model associations this is the question
+     * that matters: a cycle is an `include` chain that can be asked to include itself.
+     *
+     * @returns `true` when the graph contains a cycle.
      */
     public isCycled(): boolean {
         const visited = new Map<T, boolean>();
@@ -214,19 +291,28 @@ export class Graph<T> {
     }
 
     /**
-     * Returns list of vertices in this graph
+     * The vertices in this graph, in insertion order.
+     *
+     * @returns An iterator over the vertices.
      */
     public vertices(): IterableIterator<T> {
         return this.list.keys();
     }
 
     /**
-     * Performs recursive cycles detection on a graph.
-     * Private method. If you need to detect cycles, use isCycled() instead.
+     * Looks for a cycle reachable from one vertex.
      *
-     * @param vertex
-     * @param visited
-     * @param stack
+     * @remarks
+     * Depth-first with a recursion stack beside the visited set: reaching a vertex
+     * that is still on the stack means the path has come back on itself, whereas
+     * reaching one that is merely visited means it was explored already and holds no
+     * cycle. The stack entry is cleared on the way out, which is what keeps two
+     * separate paths through one vertex from reading as a cycle.
+     *
+     * @param vertex - Vertex to search from.
+     * @param visited - Vertices explored in this run, added to as it goes.
+     * @param stack - Vertices on the current path.
+     * @returns `true` when a cycle is reachable from `vertex`.
      */
     private detectCycle(
         vertex: T,

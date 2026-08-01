@@ -527,9 +527,16 @@ function fixReturningOptions(options?: ReturningOptions) {
 }
 
 /**
- * Overrides queryInterface behavior to add support of views definition
+ * Wraps a query interface with view support and the widened `returning` option.
  *
- * @param queryInterface
+ * @remarks
+ * Called once per connection. Every write method is replaced with one that maps an
+ * empty `returning` array to `false` first, `createView` and `dropView` are added, and
+ * the select-query generator is wrapped so a dynamic view's definition is substituted
+ * into the statement — at the top level and through joins.
+ *
+ * @param queryInterface - Sequelize's own interface, modified in place.
+ * @returns The same object, typed with the additions.
  */
 function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
     const {
@@ -1644,10 +1651,10 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Makes sure given property properly serialized
+     * Serializes one property that sequelize's own `toJSON()` left out.
      *
-     * @param prop
-     * @param serialized
+     * @param prop - Property to check.
+     * @param serialized - Result being built, added to in place.
      */
     private verifyProperty(prop: string, serialized: any) {
         // add more skipping props if needed...
@@ -1667,11 +1674,11 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Makes sure given array property properly serialized
+     * Serializes an array property element by element.
      *
-     * @param arr
-     * @param prop
-     * @param serialized
+     * @param arr - Array to serialize.
+     * @param prop - Property it belongs to.
+     * @param serialized - Result being built, added to in place.
      */
     private verifyArray(arr: any[], prop: string, serialized: any) {
         if (!serialized[prop]) {
