@@ -51,6 +51,24 @@ import {
 } from '../types/index.js';
 import type { ModelAttributeColumnReferencesOptions } from 'sequelize/types/model';
 
+/**
+ * Turns a caller's serialized query into Sequelize options, and back out as SQL.
+ *
+ * @remarks
+ * The reason this package exists. A GraphQL API receives a filter, a page, an order
+ * and the set of fields the query selected — all of it plain JSON, none of it in a
+ * shape Sequelize accepts. These helpers translate: `autoQuery` is the one that
+ * composes the others, `toWhereOptions` turns a serialized filter into a `where` with
+ * the joins its nested parts imply, and `toLimitOptions` and `toOrderOptions` cover
+ * paging and ordering.
+ *
+ * The efficiency comes from the fields map. A column nobody asked for is not selected
+ * and a relation nobody reached into is not joined, so the statement narrows as the
+ * caller's selection narrows rather than being fixed by the resolver.
+ *
+ * Below that sit the escape hatches — `sql`, `L` and `E` — for the cases no option
+ * object can express.
+ */
 export namespace query {
     const RX_OP = /^\$/;
     const RX_LIKE = /%/;
@@ -65,6 +83,13 @@ export namespace query {
     const RX_SQL_END = /;?$/;
     const RX_SQL_QUOTE = /'/g;
 
+    /**
+     * The two shapes {@link query.pureData} accepts: one record, or many.
+     *
+     * @remarks
+     * An overloaded call signature rather than a union, so the return type follows the
+     * argument — pass an array and an array comes back.
+     */
     interface PureDataFunction {
         <_M extends Model<_M>, T>(
             model: typeof Model,

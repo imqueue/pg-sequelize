@@ -25,7 +25,19 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import 'reflect-metadata';
 import { type IMQRPCRequest, runWithRequest } from '@imqueue/rpc';
-import { CreatedBy, DeletedBy, UpdatedBy } from '../src/index.js';
+import {
+    AssociatedWith,
+    Column,
+    ColumnIndex,
+    CreatedBy,
+    DataType,
+    DeletedBy,
+    getOptions,
+    NullableIndex,
+    Table,
+    UpdatedBy,
+    View,
+} from '../src/index.js';
 
 const USER_ID = 42;
 
@@ -34,6 +46,12 @@ function asUser<T>(fn: () => T): T {
         { metadata: { userId: USER_ID } } as unknown as IMQRPCRequest,
         fn,
     );
+}
+
+function indicesOf(
+    model: any,
+): { column: string; options: Record<string, any> }[] {
+    return (getOptions(model.prototype) as any)?.indices || [];
 }
 
 function decorated(decorator: (target: any, prop: string) => void) {
@@ -278,5 +296,177 @@ describe('decorators', () => {
                 assert.deepEqual(calls[0].values, { stamped: USER_ID });
             },
         );
+    });
+});
+
+describe('@ColumnIndex', () => {
+    it('works on a model that has no options bag yet', () => {
+        // TypeScript applies property decorators BEFORE class decorators, so on
+        // an ordinary model this always runs before @Table has made the options
+        // bag. Reading `.indices` off the missing bag threw a TypeError at
+        // import time, which made the decorator unusable on a real model.
+        class Model {}
+
+        assert.doesNotThrow(() => ColumnIndex(Model.prototype, 'email'));
+        assert.deepEqual(indicesOf(Model), [{ column: 'email', options: {} }]);
+    });
+
+    it('accumulates declarations, and @Table keeps them', () => {
+        class Model {}
+
+        Column(DataType.STRING)(Model.prototype, 'email');
+        ColumnIndex({ unique: true })(Model.prototype, 'email');
+        ColumnIndex(Model.prototype, 'status');
+        Table(Model);
+
+        assert.deepEqual(
+            indicesOf(Model).map(index => index.column),
+            ['email', 'status'],
+        );
+        assert.equal(indicesOf(Model)[0].options.unique, true);
+    });
+});
+
+describe('@NullableIndex', () => {
+    it('declares one partial index per half of the column', () => {
+        class Model {}
+
+        NullableIndex(Model.prototype, 'closedAt');
+
+        assert.deepEqual(
+            indicesOf(Model).map(index => index.options.predicate),
+            ['"closedAt" IS NULL', '"closedAt" IS NOT NULL'],
+        );
+    });
+
+    it('does not let the two halves share one options object', () => {
+        class Model {}
+
+        NullableIndex({ concurrently: true })(Model.prototype, 'closedAt');
+
+        const indices = indicesOf(Model);
+
+        // Both halves were built by mutating the SAME object, which ColumnIndex
+        // stores by reference — so both ended up as the second half, saying
+        // IS NOT NULL, with no predicate at all.
+        assert.notEqual(indices[0].options, indices[1].options);
+        assert.deepEqual(
+            indices.map(index => index.options.expression),
+            ['"closedAt" IS NULL', '"closedAt" IS NOT NULL'],
+        );
+        assert.equal(
+            indices.every(index => index.options.concurrently),
+            true,
+        );
+    });
+
+    it('combines a predicate of its own rather than dropping it', () => {
+        class Model {}
+
+        NullableIndex({ predicate: '"deletedAt" IS NULL' })(
+            Model.prototype,
+            'closedAt',
+        );
+
+        assert.deepEqual(
+            indicesOf(Model).map(index => index.options.predicate),
+            [
+                '("deletedAt" IS NULL) AND "closedAt" IS NULL',
+                '("deletedAt" IS NULL) AND "closedAt" IS NOT NULL',
+            ],
+        );
+    });
+
+    it('suffixes a given name so the halves cannot collide', () => {
+        class Model {}
+
+        NullableIndex({ name: 'lead_closed' })(Model.prototype, 'closedAt');
+
+        assert.deepEqual(
+            indicesOf(Model).map(index => index.options.name),
+            ['lead_closed_null', 'lead_closed_not_null'],
+        );
+    });
+});
+
+describe('@AssociatedWith', () => {
+    it('resolves the association on first read, not at decoration', () => {
+        class Input {}
+        let calls = 0;
+        let model: any;
+
+        AssociatedWith(() => {
+            calls++;
+
+            return { model, input: Input };
+        })(Input.prototype, 'paymentType');
+
+        // Called eagerly, the thunk would have captured `undefined` here — which
+        // is exactly what a circular import between a model and an input class
+        // produces.
+        assert.equal(calls, 0);
+
+        model = class PaymentType {};
+
+        const association = (new Input() as any).paymentType;
+
+        assert.equal(calls, 1);
+        assert.equal(association.model, model);
+        assert.equal(association.input, Input);
+        assert.equal(association.key, 'paymentType');
+    });
+
+    it('resolves once and caches', () => {
+        class Input {}
+        let calls = 0;
+
+        AssociatedWith(() => {
+            calls++;
+
+            return { model: Input, input: Input };
+        })(Input.prototype, 'nested');
+
+        const instance: any = new Input();
+
+        assert.equal(instance.nested, instance.nested);
+        assert.equal(calls, 1);
+    });
+
+    it('takes modelFieldName as the association key when given', () => {
+        class Input {}
+
+        AssociatedWith(() => ({
+            model: Input,
+            input: Input,
+            modelFieldName: 'payment_type',
+        }))(Input.prototype, 'paymentType');
+
+        assert.equal((new Input() as any).paymentType.key, 'payment_type');
+    });
+});
+
+describe('@View', () => {
+    it('rejects a blank definition in either form', () => {
+        // The string form skipped the check entirely, and an options object
+        // without the property threw an unhelpful error from reading it.
+        assert.throws(() => View(''), /View definition is missing/);
+        assert.throws(() => View('   '), /View definition is missing/);
+        assert.throws(() => View({} as any), /View definition is missing/);
+    });
+
+    it('marks the model as a view', () => {
+        class ProductRevenue {}
+
+        View({
+            viewDefinition:
+                'CREATE OR REPLACE VIEW "ProductRevenue" AS SELECT 1 AS "id"',
+            freezeTableName: true,
+            timestamps: false,
+        })(ProductRevenue);
+
+        const options: any = getOptions(ProductRevenue.prototype);
+
+        assert.equal(options.treatAsView, true);
+        assert.equal(options.freezeTableName, true);
     });
 });

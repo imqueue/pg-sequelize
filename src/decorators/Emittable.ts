@@ -24,9 +24,18 @@
 import 'reflect-metadata';
 
 /**
- * Declares emittable model, which would have bound trigger sending
- * table rows change events using PostgreSQL NOTIFY command.
- * This is PostgreSQL only feature
+ * Placeholder for change notifications, which are not implemented.
+ *
+ * @remarks
+ * The intent was to attach a trigger that publishes row changes through Postgres
+ * `NOTIFY`. The body is empty: applying this to a model does nothing whatever, and
+ * nothing about a model changes by carrying it. It is unfinished work that happens to
+ * be exported, not a switch that is off.
+ *
+ * What exists today: `@imqueue/pg-pubsub` is the `LISTEN`/`NOTIFY` client, and
+ * `@imqueue/pg-prisma` ships the change-notify triggers for the Prisma stack.
+ *
+ * @param _target - The model class, which is ignored.
  */
 export function Emittable(_target: any) {
     // todo: implement
