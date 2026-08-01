@@ -216,7 +216,7 @@ describe('BaseModel.syncIndex()', () => {
         assert.match(statements[0], /IF NOT EXISTS/);
     });
 
-    it('builds the declared clauses into the statement', async () => {
+    it('builds the declared clauses where Postgres accepts them', async () => {
         const { model, statements } = target();
 
         await syncIndex(
@@ -226,19 +226,34 @@ describe('BaseModel.syncIndex()', () => {
                 unique: true,
                 concurrently: true,
                 method: 'BTREE',
+                collation: '"C"',
                 order: 'DESC',
                 nullsFirst: false,
+                tablespace: 'fast',
                 predicate: '"deletedAt" IS NULL',
             },
             1,
         );
 
-        const create = statements[1];
+        // USING goes after ON, and everything describing the key goes INSIDE the
+        // parentheses. Emitted the other way round — USING before ON, COLLATE and
+        // the sort order after the closing paren — Postgres rejects the whole
+        // statement, so these five options were unusable.
+        assert.equal(
+            statements[1],
+            'CREATE UNIQUE INDEX CONCURRENTLY "Lead_email_idx1"' +
+                ' ON "Lead" USING BTREE ("email" COLLATE "C" DESC NULLS LAST)' +
+                ' TABLESPACE fast WHERE "deletedAt" IS NULL',
+        );
+    });
 
-        assert.match(create, /CREATE UNIQUE INDEX CONCURRENTLY/);
-        assert.match(create, /USING BTREE/);
-        assert.match(create, /DESC NULLS LAST/);
-        assert.match(create, /WHERE "deletedAt" IS NULL/);
+    it('emits INCLUDE for a covering index', async () => {
+        const { model, statements } = target();
+
+        // Declared in ColumnIndexOptions from the start and never emitted.
+        await syncIndex(model, 'email', { include: ['name', 'status'] }, 1);
+
+        assert.match(statements[1], /\("email"\) INCLUDE \("name", "status"\)/);
     });
 
     it('indexes the expression instead of the column when given one', async () => {
@@ -246,7 +261,7 @@ describe('BaseModel.syncIndex()', () => {
 
         await syncIndex(model, 'email', { expression: 'lower("email")' }, 1);
 
-        assert.match(statements[1], /\(\(lower\("email"\)\)\)/);
+        assert.match(statements[1], /ON "Lead" \(\(lower\("email"\)\)\)/);
     });
 
     it('rejects when a statement fails', async () => {

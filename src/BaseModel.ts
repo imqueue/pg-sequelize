@@ -1345,6 +1345,14 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      * always wins over what is in the database; with `safe`, an existing index is
      * left exactly as it is and only a missing one is created.
      *
+     * Five of those options used to be placed where Postgres does not accept them —
+     * `USING` ahead of `ON`, and `COLLATE`, the operator class, the sort order and
+     * the nulls position after the closing parenthesis rather than inside it — so
+     * `method`, `collation`, `opClass`, `order` and `nullsFirst` could not be used at
+     * all. `include` was declared and never emitted. Both are fixed, and the reason
+     * neither was noticed is the promise bug below: the statement failed, and the
+     * rejection went nowhere.
+     *
      * The two statements used to be attached to the same already-resolved promise
      * rather than chained onto each other, so they were issued together and this
      * returned before either had run — the create could reach the server ahead of the
@@ -1367,47 +1375,56 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
             options.name || `${this.getTableName()}_${column}_idx${position}`;
         // noinspection TypeScriptUnresolvedVariable
         const queryInterface = self.QueryInterface || self.queryInterface;
+        const concurrently = options.concurrently ? ' CONCURRENTLY' : '';
+        // Everything that describes the KEY belongs inside the parentheses, and
+        // USING belongs before them: `ON "t" USING btree ("c" COLLATE x DESC)`.
+        // Emitted after the closing paren — and USING ahead of ON — Postgres
+        // rejects the statement outright, so `method`, `collation`, `opClass`,
+        // `order` and `nullsFirst` could not be used at all. It went unnoticed
+        // because this method discarded its own rejections.
+        const key = [
+            options.expression ? `(${options.expression})` : `"${column}"`,
+            options.collation ? `COLLATE ${options.collation}` : '',
+            options.opClass || '',
+            options.order || '',
+            options.nullsFirst === true
+                ? 'NULLS FIRST'
+                : options.nullsFirst === false
+                  ? 'NULLS LAST'
+                  : '',
+        ]
+            .filter(Boolean)
+            .join(' ');
+        const covered = options.include || [];
+        const include = covered.length
+            ? ` INCLUDE (${covered.map(name => `"${name}"`).join(', ')})`
+            : '';
         let chain: Promise<any> = Promise.resolve();
 
         if (!options.safe) {
             chain = chain.then(() =>
-                queryInterface.sequelize.query(`
-                DROP INDEX${
-                    options.concurrently ? ' CONCURRENTLY' : ''
-                } IF EXISTS "${indexName}"
-            `),
+                queryInterface.sequelize.query(
+                    `DROP INDEX${concurrently} IF EXISTS "${indexName}"`,
+                ),
             );
         }
 
-        // tslint:disable-next-line:max-line-length
         // noinspection TypeScriptUnresolvedVariable,PointlessBooleanExpressionJS
-        chain = chain.then(() =>
-            queryInterface.sequelize.query(`
-                CREATE${options.unique ? ' UNIQUE' : ''} INDEX${
-                    options.concurrently ? ' CONCURRENTLY' : ''
-                }${options.safe ? ' IF NOT EXISTS' : ''} "${indexName}"${
-                    options.method ? ` USING ${options.method}` : ''
-                } ON "${this.getTableName()}" (${
-                    options.expression
-                        ? `(${options.expression})`
-                        : `"${column}"`
-                })${options.collation ? ` COLLATE ${options.collation}` : ''}${
-                    options.opClass ? ` ${options.opClass}` : ''
-                }${options.order ? ` ${options.order}` : ''}${
-                    options.nullsFirst === true
-                        ? ' NULLS FIRST'
-                        : options.nullsFirst === false
-                          ? ' NULLS LAST'
-                          : ''
-                }${
-                    options.tablespace
-                        ? ` TABLESPACE ${options.tablespace}`
-                        : ''
-                }${options.predicate ? ` WHERE ${options.predicate}` : ''}
-            `),
+        return chain.then(() =>
+            queryInterface.sequelize.query(
+                `CREATE${options.unique ? ' UNIQUE' : ''} INDEX` +
+                    `${concurrently}${options.safe ? ' IF NOT EXISTS' : ''}` +
+                    ` "${indexName}" ON "${this.getTableName()}"` +
+                    `${options.method ? ` USING ${options.method}` : ''}` +
+                    ` (${key})${include}` +
+                    `${
+                        options.tablespace
+                            ? ` TABLESPACE ${options.tablespace}`
+                            : ''
+                    }` +
+                    `${options.predicate ? ` WHERE ${options.predicate}` : ''}`,
+            ),
         );
-
-        return chain;
     }
 
     // Make sure finders executed on views properly map numeric types
