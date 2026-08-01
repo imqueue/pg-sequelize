@@ -34,11 +34,11 @@ jobs:
     permissions:
       contents: write
     with:
-      package: '@imqueue/sequelize'
+      package: '@imqueue/pg-sequelize'
       tag: ${{ inputs.tag || '' }}
       dry-run: ${{ inputs.dry-run || false }}
       blurb: >-
-        `@imqueue/sequelize` turns a query described as data — filters, paging, ordering and the
+        `@imqueue/pg-sequelize` turns a query described as data — filters, paging, ordering and the
         requested fields — into one efficient Sequelize statement, with database views as models
         and the Postgres index options Sequelize cannot express. Part of the @imqueue framework
         for Node.js & TypeScript microservices.

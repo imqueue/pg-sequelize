@@ -1,5 +1,5 @@
 /*!
- * @imqueue/sequelize - Sequelize ORM refines for @imqueue
+ * @imqueue/pg-sequelize - Sequelize ORM refines for @imqueue
  *
  * Copyright (c) 2019, imqueue.com <support@imqueue.com>
  *

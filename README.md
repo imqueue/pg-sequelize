@@ -1,8 +1,8 @@
-# @imqueue/sequelize
+# @imqueue/pg-sequelize
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/imqueue/sequelize/build.yml)](https://github.com/imqueue/sequelize)
-[![Known Vulnerabilities](https://snyk.io/test/github/imqueue/sequelize/badge.svg?targetFile=package.json)](https://snyk.io/test/github/imqueue/sequelize?targetFile=package.json)
-[![License](https://img.shields.io/badge/license-GPL-blue.svg)](https://github.com/imqueue/sequelize/blob/master/LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/imqueue/pg-sequelize/build.yml)](https://github.com/imqueue/pg-sequelize)
+[![Known Vulnerabilities](https://snyk.io/test/github/imqueue/pg-sequelize/badge.svg?targetFile=package.json)](https://snyk.io/test/github/imqueue/pg-sequelize?targetFile=package.json)
+[![License](https://img.shields.io/badge/license-GPL-blue.svg)](https://github.com/imqueue/pg-sequelize/blob/master/LICENSE)
 
 Turns a query described as data — a filter, a page, an order and the fields the caller
 actually needs — into one efficient Sequelize statement. Plus database views as models,
@@ -19,10 +19,18 @@ If you would rather build on Prisma,
 [@imqueue/pg-prisma](https://github.com/imqueue/pg-prisma) covers the same ground for
 that stack. Both are supported — pick the ORM you want to live with.
 
+# Renamed
+
+This package was called `@imqueue/sequelize` up to and including 4.1.3. The old
+name is deprecated on npm and receives no further releases; there is no
+compatibility shim. To migrate, change the dependency and every import specifier
+— no export changed name or signature, and the `pg-` prefix only states what was
+always true: this targets Postgres specifically, not every Sequelize dialect.
+
 # Install
 
 ~~~bash
-npm i --save @imqueue/sequelize
+npm i --save @imqueue/pg-sequelize
 ~~~
 
 # Usage
@@ -31,7 +39,7 @@ Connect once, anywhere in the service. Every later call hands back the same inst
 only the first one needs the configuration:
 
 ~~~typescript
-import { database, query } from '@imqueue/sequelize';
+import { database, query } from '@imqueue/pg-sequelize';
 
 const sequelize = database({
     logger: console,
@@ -76,7 +84,7 @@ field set straight through; an RPC method taking a filter object is the same pro
 
 Every exported symbol carries its own documentation, so an editor is the fastest
 reference. The same content is published, symbol by symbol, as the
-[API reference](https://imqueue.org/api/sequelize/latest/) — searchable, and linkable
+[API reference](https://imqueue.org/api/pg-sequelize/latest/) — searchable, and linkable
 when you need to point someone at one thing. The wider ecosystem documentation is at
 [imqueue.org](https://imqueue.org/docs/).
 
