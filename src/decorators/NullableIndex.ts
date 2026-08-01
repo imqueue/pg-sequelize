@@ -27,8 +27,6 @@ import {
     ColumnIndex,
 } from './ColumnIndex.js';
 
-type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;
-
 export type NullableColumnIndexOptions = Omit<ColumnIndexOptions, 'expression'>;
 
 export function NullableIndex(
