@@ -24,32 +24,39 @@
 /**
  * Sequelize and `sequelize-typescript`, refined for `@imqueue` services.
  *
- * The package has three jobs, and in practice they are used in that order of
- * frequency.
+ * It exists to join two things that do not meet on their own: the input a GraphQL API
+ * receives — a filter, a page, an order, and the set of fields the query actually
+ * selected — and an efficient SQL statement for the service behind it. A resolver
+ * passes that input through almost untouched and gets back a query that selects the
+ * columns asked for, joins only the relations the selection reaches into, and filters
+ * on values that arrived as JSON.
  *
- * First, it is the single import surface for the whole ORM stack. Everything
- * `sequelize` and `sequelize-typescript` export is re-exported here — `Table`,
- * `Column`, `DataType`, `AllowNull`, `ForeignKey`, `BelongsTo`, `HasMany`,
- * `QueryInterface` and the rest — so a service imports from one place rather than
- * three, and several option types are widened on the way through (see
- * {@link ReturningOptions}). A migration typically needs nothing from here but
+ * The `query` namespace and the serializable input types are what do it. Sequelize
+ * writes a filter with ES symbols as its operators, and a symbol cannot survive a JSON
+ * payload, so {@link FilterInput}, {@link FieldsInput}, {@link PaginationInput} and
+ * {@link OrderByInput} give the wire an equivalent that can. `query.autoQuery` turns
+ * them back into Sequelize options, and builds the `include` tree the requested fields
+ * imply — which is where the efficiency comes from: a field nobody asked for is not
+ * selected, and a relation nobody reached into is not joined.
+ *
+ * {@link database} builds and caches the connection and discovers your compiled model
+ * files. It is a process-wide singleton: the first call configures it, every later one
+ * hands back the same instance, and SQL logging that can prettify and colourise
+ * statements is installed along the way.
+ *
+ * It is also the single import surface for the ORM stack, which is what most files in
+ * a service touch it for. Everything `sequelize` and `sequelize-typescript` export is
+ * re-exported here — `Table`, `Column`, `DataType`, `AllowNull`, `ForeignKey`,
+ * `BelongsTo`, `HasMany`, `QueryInterface` and the rest — so a model imports from one
+ * place rather than three, and several option types are widened on the way through
+ * (see {@link ReturningOptions}). A migration usually needs nothing but
  * `QueryInterface`.
  *
- * Second, {@link database} builds and caches the connection, discovers your compiled
- * model files, and installs SQL logging that can prettify and colourise statements.
- * It is a process-wide singleton — the first call configures it and every later call
- * just hands back the same instance.
- *
- * Third, it supplies the vocabulary a remote caller needs in order to query. Prisma
- * and Sequelize both express filters with values a JSON payload cannot carry —
- * Sequelize's operators are ES symbols — so {@link FilterInput},
- * {@link FieldsInput}, {@link PaginationInput} and {@link OrderByInput} give a
- * serializable equivalent, and the `query` namespace turns them back into Sequelize
- * options. `query.autoQuery` is the one that composes the others.
- *
- * The decorators are the smallest part but the most opinionated: {@link CreatedBy},
+ * The decorators are the smallest part and the most opinionated: {@link CreatedBy},
  * {@link UpdatedBy} and {@link DeletedBy} stamp the acting user from the RPC request
- * context, and {@link AssociatedWith} declares a relation the query helpers can walk.
+ * context, {@link AssociatedWith} declares a relation the query helpers can walk, and
+ * `View` and `DynamicView` let a model be a database view — a parameterised one, whose
+ * placeholders are filled in per query.
  *
  * @example
  * ```typescript
