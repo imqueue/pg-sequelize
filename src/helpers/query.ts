@@ -63,6 +63,7 @@ export namespace query {
     const RX_SPACE = /\s/;
     const RX_SQL_CLEAN = /\s+(;|$)/;
     const RX_SQL_END = /;?$/;
+    const RX_SQL_QUOTE = /'/g;
 
     interface PureDataFunction {
         <_M extends Model<_M>, T>(
@@ -1227,32 +1228,69 @@ export namespace query {
         return null;
     }
 
-    // noinspection JSUnusedLocalSymbols,JSCommentMatchesSignature
     /**
-     * Returns sequelize Literal build from a given string or string template
-     * Actually it's an alias for Sequelize.Literal
+     * Builds a Sequelize literal from a string or a template — the escape hatch for
+     * SQL that no query option can express.
      *
+     * @remarks
+     * A literal is spliced into the statement exactly as given, so nothing about it
+     * is parsed, checked or escaped. That is the whole point of it, and the reason to
+     * keep each one as small as the job allows: a correlated subquery in a `where`, a
+     * window function in an `order`, an operator Sequelize has no name for. Runtime
+     * values belong in {@link query.E} rather than in the text.
+     *
+     * Used as a template tag, the substitutions used to be dropped and the literal
+     * parts joined with commas, so the example below produced
+     * `(SELECT COUNT(*) FROM "SomeTable" WHERE owner = ,) = 0` — accepted by the
+     * template, rejected by Postgres. They are now interpolated in order.
+     *
+     * {@link query.sql} refuses substitutions rather than interpolating them, and the
+     * difference is deliberate: a complete statement can carry bind parameters, so
+     * interpolating into one is a choice to avoid. A fragment handed to Sequelize as
+     * a literal has no bind channel, which leaves escaping as the only option.
+     *
+     * @param str - The SQL text, or the literal parts when used as a template tag.
+     * @param values - The substitutions, when used as a template tag.
+     * @returns The text as a Sequelize literal, ready to use as a query option value.
      * @example
      * ```typescript
      * const owner = 3;
      * const query = {
-     *   where: L`(SELECT COUNT(*) FROM "SomeTable" WHERE owner = ${E(id)}) = 0`
-     * }
+     *     where: L`(SELECT COUNT(*) FROM "SomeTable" WHERE owner = ${E(owner)}) = 0`,
+     * };
      * ```
-     * @param str
      */
     export function L(
         str: TemplateStringsArray | string,
-        ..._: any[]
+        ...values: any[]
     ): Literal {
-        return SequelizeLib.literal(str as string);
+        if (typeof str === 'string') {
+            return SequelizeLib.literal(str);
+        }
+
+        return SequelizeLib.literal(
+            str.reduce((text, part, i) => text + String(values[i - 1]) + part),
+        );
     }
 
     /**
-     * Escapes given argument. If argument is not a number or a string will
-     * convert it to 'NULL'
+     * Renders a value as a SQL constant: a number as itself, a string quoted and
+     * escaped, anything else as `NULL`.
      *
-     * @param input
+     * @remarks
+     * The companion to {@link query.L} and the only safe way to get a runtime value
+     * into a literal. Single quotes inside a string are doubled, which is what
+     * Postgres requires — and what this did not do: a value of `O'Brien` came out as
+     * a broken string constant, and a value chosen deliberately came out as SQL. The
+     * same path escapes a dynamic view's parameters, so a view selected with
+     * caller-supplied `viewParams` was open the same way.
+     *
+     * Only numbers and strings render as values. Booleans, dates, objects, `null` and
+     * `undefined` all become `NULL` — so format a date as a string before passing it,
+     * and do not reach for this to render a boolean.
+     *
+     * @param input - Value to render.
+     * @returns The number itself, a quoted and escaped string, or `NULL`.
      */
     export function E(input: any) {
         if (typeof input === 'number') {
@@ -1260,7 +1298,7 @@ export namespace query {
         }
 
         if (typeof input === 'string') {
-            return `'${input}'`;
+            return `'${input.replace(RX_SQL_QUOTE, "''")}'`;
         }
 
         return 'NULL';
