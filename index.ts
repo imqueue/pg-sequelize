@@ -24,12 +24,23 @@
 /**
  * Sequelize and `sequelize-typescript`, refined for `@imqueue` services.
  *
- * It exists to join two things that do not meet on their own: the input a GraphQL API
- * receives — a filter, a page, an order, and the set of fields the query actually
- * selected — and an efficient SQL statement for the service behind it. A resolver
- * passes that input through almost untouched and gets back a query that selects the
- * columns asked for, joins only the relations the selection reaches into, and filters
- * on values that arrived as JSON.
+ * The problem it was built for: a caller describes the query it wants as DATA — a
+ * filter, a page, an order, and the fields it actually needs — and the service has to
+ * turn that into one efficient statement, without trusting any of it and without
+ * knowing in advance which shape will arrive. Anything can hand you a query described
+ * that way; a GraphQL API is the case this was written against, where a resolver passes
+ * the arguments and the selected field set through almost untouched and gets back a
+ * query that selects the columns asked for, joins only the relations the selection
+ * reaches into, and filters on values that arrived as JSON. An RPC method taking a
+ * filter object, or a REST endpoint with query parameters, is the same problem with
+ * different packaging.
+ *
+ * Which package to reach for. This one is locked to Sequelize v6, and that is a
+ * position rather than neglect: upstream Sequelize has sat in v7-alpha for years and is
+ * asking for maintainers, so v6 is where the ground is stable. Services already on
+ * Sequelize keep a maintained path and this package keeps evolving on top of it. For
+ * NEW development, `@imqueue/pg-prisma` is the recommendation — same problems, a stack
+ * that is going somewhere.
  *
  * The `query` namespace and the serializable input types are what do it. Sequelize
  * writes a filter with ES symbols as its operators, and a symbol cannot survive a JSON
