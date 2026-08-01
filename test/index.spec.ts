@@ -1,5 +1,5 @@
 /*!
- * @imqueue/sequelize Public API Smoke Tests
+ * @imqueue/pg-sequelize Public API Smoke Tests
  *
  * I'm Queue Software Project
  * Copyright (C) 2026  imqueue.com <support@imqueue.com>

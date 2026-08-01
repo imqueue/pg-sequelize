@@ -1,5 +1,5 @@
 /*!
- * @imqueue/sequelize - Sequelize ORM refines for @imqueue
+ * @imqueue/pg-sequelize - Sequelize ORM refines for @imqueue
  *
  * I'm Queue Software Project
  * Copyright (C) 2025  imqueue.com <support@imqueue.com>
@@ -334,7 +334,7 @@ export interface InitOptions
  *
  * The cost is a cast at the call site, and the mimicked option types in this module
  * are what to cast to — they exist for this and nothing else. Whenever TypeScript
- * objects to a `returning` array, import the type it names from `@imqueue/sequelize`
+ * objects to a `returning` array, import the type it names from `@imqueue/pg-sequelize`
  * rather than from `sequelize`. Use `restoreSerialization()` to forget the list
  * again.
  *
