@@ -81,8 +81,8 @@ export namespace query {
      * Performs safe trimming space characters inside SQL query input string
      * and inline it.
      *
-     * @param {string} input - input string
-     * @return {string} - sanitized string
+     * @param input - input string
+     * @returns sanitized string
      */
     export function safeSqlSpaceCleanup(input: string): string {
         let output = '';
@@ -113,9 +113,8 @@ export namespace query {
     /**
      * SQL tag used to tag sql queries
      *
-     * @param {string | TemplateStringsArray} sqlQuery
-     * @param {...any[]} [rest] - anything else
-     * @return {string}
+     * @param sqlQuery
+     * @param rest - anything else
      */
     export function sql(
         sqlQuery: string | TemplateStringsArray,
@@ -129,10 +128,9 @@ export namespace query {
     /**
      * Extracts pure data from given input data for a given model
      *
-     * @param {typeof Model} model
-     * @param {any | any[]} input
-     * @param {string[]} [attributes]
-     * @return {any}
+     * @param model
+     * @param input
+     * @param attributes
      */
     export const pureData: PureDataFunction = <T, _M extends BaseModel<_M>>(
         model: typeof Model,
@@ -160,9 +158,8 @@ export namespace query {
      * Omits non-related properties from a given fields map object associated
      * with the given model
      *
-     * @param {typeof Model} model
-     * @param {any} fields
-     * @return {string[]}
+     * @param model
+     * @param fields
      */
     export function pureFields(
         model: typeof BaseModel,
@@ -197,9 +194,8 @@ export namespace query {
      * Returns true if given fields contains associations from given model,
      * false otherwise
      *
-     * @param {typeof Model} model
-     * @param {any} fields
-     * @return {boolean}
+     * @param model
+     * @param fields
      */
     export function needNesting(model: typeof Model, fields: any): boolean {
         if (!fields) {
@@ -220,10 +216,9 @@ export namespace query {
      * Returns list of filtered attributes from model through a given list of
      * user requested fields
      *
-     * @param {any} attributes
-     * @param {string[]} fields
-     * @param {typeof BaseModel} [model]
-     * @return {string[]}
+     * @param attributes
+     * @param fields
+     * @param model
      */
     export function filtered(
         attributes: any,
@@ -245,9 +240,8 @@ export namespace query {
      * Extracts foreign keys existing on the given model for a given list of
      * associations and returns as field names list
      *
-     * @param {typeof BaseModel} model
-     * @param {string[]} relations
-     * @return {string[]}
+     * @param model
+     * @param relations
      */
     export function foreignKeys(
         model: typeof BaseModel,
@@ -282,8 +276,7 @@ export namespace query {
     /**
      * Merges given arrays of scalars making sure they contains unique values
      *
-     * @param {any[][]} args
-     * @return {any[]}
+     * @param args
      */
     function arrayMergeUnique(...args: any[][]): any[] {
         const result: any[] = [];
@@ -298,9 +291,9 @@ export namespace query {
     /**
      * Makes sure all merge arguments are merged into a given query
      *
-     * @param {any} [queryOptions]
-     * @param {...any[]} merge
-     * @return - merged query options
+     * @param queryOptions
+     * @param merge
+     * @returns merged query options
      */
     export function mergeQuery(queryOptions: any = {}, ...merge: any[]): any {
         for (const item of merge) {
@@ -354,12 +347,12 @@ export namespace query {
      * fields map to a given model and returns query find options. Additionally
      * will merge all given options as the rest arguments.
      *
-     * @param {Model} model - model to build query for
-     * @param {any} fields - map of the fields requested by a user or a list
+     * @param model - model to build query for
+     * @param fields - map of the fields requested by a user or a list
      *                       of fields for a root object (without associations)
-     * @param {...Array<Partial<T> | undefined>} merge - other query parts to
+     * @param merge - other query parts to
      *                                                   merge with
-     * @return {T} - query options type specified by a call
+     * @returns query options type specified by a call
      */
     export function autoQuery<T>(
         model: any,
@@ -436,8 +429,7 @@ export namespace query {
     /**
      * Return names of primary key fields for a given model.
      *
-     * @param {typeof BaseModel} model
-     * @return {string[]}
+     * @param model
      */
     export function primaryKeys(model: typeof BaseModel): string[] {
         const fields = model.rawAttributes;
@@ -448,9 +440,6 @@ export namespace query {
     /**
      * Related entity arguments type used to be passed to createEntity()
      * subsequent calls.
-     *
-     * @type {RelationArgs}
-     * @access private
      */
     type RelationArgs = [
         any,
@@ -463,9 +452,6 @@ export namespace query {
     /**
      * Foreign key map representation, where related property name references
      * parent property name.
-     *
-     * @type {ForeignKeyMap}
-     * @access private
      */
     interface ForeignKeyMap {
         [property: string]: string;
@@ -475,10 +461,8 @@ export namespace query {
      * Returns foreign key map for a given pair of parent model and related
      * model.
      *
-     * @param {typeof BaseModel} parent
-     * @param {typeof BaseModel} model
-     * @return {ForeignKeyMap}
-     * @access private
+     * @param parent
+     * @param model
      */
     export function foreignKeysMap(
         parent: typeof BaseModel,
@@ -511,14 +495,12 @@ export namespace query {
     /**
      * Prepares input for a given model and builds found relation arguments
      *
-     * @access private
-     * @param {any} input
-     * @param {string[]} relations
-     * @param {typeof BaseModel} model
-     * @param {FieldsInput} [fields]
-     * @param {Transaction} [transaction]
-     * @param {T} [parent]
-     * @return {RelationArgs}
+     * @param input
+     * @param relations
+     * @param model
+     * @param fields
+     * @param transaction
+     * @param parent
      */
     function prepareInput<T extends BaseModel<T>>(
         input: any,
@@ -566,11 +548,10 @@ export namespace query {
      * Recursively creates entity and all it's relations from a given input
      * using a given model.
      *
-     * @param {T} model - model class to map entity to
-     * @param {I} input - data input object related to a given model
-     * @param {FieldsInput} [fields] - fields map to return on created entity
-     * @param {Transaction} [transaction] - transaction
-     * @return {Promise<Partial<T>>}
+     * @param model - model class to map entity to
+     * @param input - data input object related to a given model
+     * @param fields - fields map to return on created entity
+     * @param transaction - transaction
      */
     export async function createEntity<T extends BaseModel<T>, I>(
         model: typeof BaseModel,
@@ -594,16 +575,14 @@ export namespace query {
      * Recursively creates entity and all it's relations from a given input
      * using a given model.
      *
-     * @param {T} model
-     * @param {I | I[]} input
-     * @param {FieldsInput} [fields]
-     * @param {Transaction} [transaction]
-     * @param {string} [parentProperty]
-     * @param {boolean} [noAppend]
-     * @param {T} parent
-     * @param {boolean} doCommit
-     * @return {Promise<Partial<T>>}
-     * @access private
+     * @param model
+     * @param input
+     * @param fields
+     * @param transaction
+     * @param parentProperty
+     * @param noAppend
+     * @param parent
+     * @param doCommit
      */
     async function doCreateEntity<T extends BaseModel<T>, I>(
         model: typeof BaseModel,
@@ -695,10 +674,9 @@ export namespace query {
     /**
      * Builds and returns count query for a given query options and model.
      *
-     * @param {Model} model
-     * @param {any} fields
-     * @param {Array<Partial<CountOptions> | undefined>} merge
-     * @return {CountOptions}
+     * @param model
+     * @param fields
+     * @param merge
      */
     export function autoCountQuery(
         model: any,
@@ -720,9 +698,9 @@ export namespace query {
     /**
      * Builds proper paging options query part
      *
-     * @param {PaginationInput} [pageOptions] - obtained pagination input
+     * @param pageOptions - obtained pagination input
      *                                          from remote
-     * @return {FindOptions} - pagination part of the query
+     * @returns pagination part of the query
      */
     export function toLimitOptions<_T>(
         pageOptions?: PaginationInput,
@@ -763,8 +741,7 @@ export namespace query {
      * Ensures order by value is correct or returns default (ASC) if not. This
      * would prevent from any possible injections or errors.
      *
-     * @param {any} value
-     * @return {OrderDirection}
+     * @param value
      */
     function toOrderDirection(value: any): OrderDirection {
         if (String(value).toLocaleLowerCase() === 'desc') {
@@ -777,7 +754,7 @@ export namespace query {
     /**
      * Constructs order by part of the query from a given input orderBy object
      *
-     * @param {any} orderBy
+     * @param orderBy
      */
     export function toOrderOptions<_T>(orderBy?: OrderByInput): FindOptions {
         const order: FindOptions = {};
@@ -807,8 +784,7 @@ export namespace query {
     /**
      * Adds or null check to a given where field values
      *
-     * @param {string | string[]} value
-     * @return {FindOptions}
+     * @param value
      */
     export function orNull(value: string | string[]): Partial<FindOptions> {
         if (isArray(value)) {
@@ -823,8 +799,7 @@ export namespace query {
      * calls to replicate what sequelize does for us: building rich where
      * clauses.
      *
-     * @param {FilterInput} filter
-     * @return {FindOptions}
+     * @param filter
      */
     function parseFilter<_T>(filter: FilterInput): FindOptions {
         const clause: FindOptions = {};
@@ -851,9 +826,8 @@ export namespace query {
      * This gives us an ability to simulate ILIKE, <, >, <=, >=, = right withing
      * given values in the filter.
      *
-     * @param {string} prop
-     * @param {any} data
-     * @return {IFindOptions<T>>}
+     * @param prop
+     * @param data
      */
     function parseFilterValue<_T>(prop: string, data: any): FindOptions {
         const value: any = { [prop]: data };
@@ -899,9 +873,9 @@ export namespace query {
     /**
      * Builds toWhereOptions clause query sub-part for a given filter type
      *
-     * @param {T} filter
-     * @param {new () => T} inputType
-     * @return {any} - toWhereOptions clause options
+     * @param filter
+     * @param inputType
+     * @returns toWhereOptions clause options
      */
     export function toWhereOptions<T>(
         filter?: T,
@@ -991,8 +965,8 @@ export namespace query {
      * Builds where operations (conditions) from an array of values using
      * OR operator between given conditions.
      *
-     * @param {any[]} data
-     * @return any
+     * @param data
+     * @returns any
      */
     export function buildWhereFromArray(data: any[]): any {
         const ops: any[] = [];
@@ -1031,12 +1005,11 @@ export namespace query {
      * Will apply a range rule on a given filters. The rule is simple. If
      * filter query contains fields named as [ColumnName]IRange it will try to
      * convert those fields to a proper range filter if the value is a proper
-     * RangeFilter interface as { start: something, end: something }
+     * RangeFilter interface as `{ start: something, end: something }`
      * If nothing is matched will simply ignores and keep filtering props
      * as them are.
      *
-     * @param {any} filter
-     * @return {any}
+     * @param filter
      */
     export function withRangeFilters(filter: any) {
         if (!filter) {
@@ -1080,9 +1053,8 @@ export namespace query {
      * Looks up and returns include options in a given query using an array of
      * given models as a search path
      *
-     * @param {FindOptions} queryOptions
-     * @param {Array<typeof Model>} path
-     * @return {IncludeOptions | null}
+     * @param queryOptions
+     * @param path
      */
     export function getInclude(
         queryOptions: FindOptions,
@@ -1118,8 +1090,7 @@ export namespace query {
      *   where: L`(SELECT COUNT(*) FROM "SomeTable" WHERE owner = ${E(id)}) = 0`
      * }
      * ```
-     * @param {TemplateStringsArray | string} str
-     * @return {Literal}
+     * @param str
      */
     export function L(
         str: TemplateStringsArray | string,
@@ -1132,8 +1103,7 @@ export namespace query {
      * Escapes given argument. If argument is not a number or a string will
      * convert it to 'NULL'
      *
-     * @param {any} input
-     * @return {string | number}
+     * @param input
      */
     export function E(input: any) {
         if (typeof input === 'number') {
@@ -1150,9 +1120,8 @@ export namespace query {
     /**
      * Removes given properties from the given object
      *
-     * @param {any} obj
-     * @param {...string[]} props
-     * @return {any}
+     * @param obj
+     * @param props
      */
     export function skip(obj: any, ...props: string[]) {
         if (!obj) {
@@ -1171,9 +1140,8 @@ export namespace query {
      * the given arguments of include options and overrides those are matching
      * by model and alias with the provided option.
      *
-     * @param {FindOptions | CountOptions} queryOptions
-     * @param {...IncludeOptions[]} options
-     * @return {FindOptions | CountOptions}
+     * @param queryOptions
+     * @param options
      */
     export function overrideJoin(
         queryOptions: FindOptions | CountOptions,

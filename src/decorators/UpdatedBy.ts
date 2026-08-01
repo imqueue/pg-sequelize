@@ -40,21 +40,20 @@ import {
  *    must reflect who actually ran the update and not be caller-spoofable.
  *
  * Four hooks are registered, because models are written in four ways:
- *  - single INSERT                    -> `beforeCreate` (set-if-empty)
- *  - `Model.bulkCreate(records, …)`   -> `beforeBulkCreate` (set-if-empty on the
+ *  - single INSERT                    → `beforeCreate` (set-if-empty)
+ *  - `Model.bulkCreate(records, …)`   → `beforeBulkCreate` (set-if-empty on the
  *    built instances; a plain `bulkCreate` does not fire `beforeCreate`, so the
  *    per-instance hook alone would be bypassed)
- *  - instance `save()` / `update()`   -> `beforeUpdate` (receives the instance)
- *  - static `Model.update(values, …)` -> `beforeBulkUpdate` (receives options;
+ *  - instance `save()` / `update()`   → `beforeUpdate` (receives the instance)
+ *  - static `Model.update(values, …)` → `beforeBulkUpdate` (receives options;
  *    the values to write live on `options.attributes`, and Sequelize filters the
  *    written columns down to `options.fields`, computed before this hook from the
  *    caller's values — so an injected field is dropped unless also added there).
  *
  * No-op when there is no acting user (system / unattributed writes).
  *
- * @param {any} target - the decorated model's prototype
- * @param {string} propertyName - the decorated column property name
- * @return {void}
+ * @param target - the decorated model's prototype
+ * @param propertyName - the decorated column property name
  */
 export function UpdatedBy(target: any, propertyName: string): void {
     const ctor = target.constructor;
