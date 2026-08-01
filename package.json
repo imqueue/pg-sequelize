@@ -1,7 +1,7 @@
 {
   "name": "@imqueue/sequelize",
   "version": "4.1.1",
-  "description": "Sequelize ORM refines for @imqueue",
+  "description": "Sequelize/Postgres toolkit for Node.js & TypeScript microservices — turns a query described as data (filters, paging, ordering, requested fields) into one efficient statement, plus database views as models and the Postgres index options Sequelize cannot express (the @imqueue framework)",
   "scripts": {
     "clean-compiled": "npm run clean-js && npm run clean-typedefs && npm run clean-maps",
     "build": "npm run clean-compiled && tsc",
