@@ -9,16 +9,15 @@ actually needs — into one efficient Sequelize statement. Plus database views a
 the Postgres index options Sequelize cannot express, and a single import surface for the
 whole ORM stack.
 
-# Which package should I use?
+# Sequelize v6, and the alternative
 
-**For new development, start with
-[@imqueue/pg-prisma](https://github.com/imqueue/pg-prisma) instead.**
+This targets Sequelize v6 — a mature line, proven in production, and the one this
+package is actively developed against. Sequelize v7 is still in alpha upstream, so v6 is
+what there is to build on today; if v7 lands, this follows it.
 
-This package is locked to Sequelize v6, and that is a position rather than neglect:
-upstream Sequelize has sat in v7-alpha for years and is asking for maintainers, so v6 is
-where the ground is stable. Services already built on Sequelize keep a maintained path
-here and this package keeps evolving on top of it — it is not abandoned. It is simply not
-the stack to start something new on.
+If you would rather build on Prisma,
+[@imqueue/pg-prisma](https://github.com/imqueue/pg-prisma) covers the same ground for
+that stack. Both are supported — pick the ORM you want to live with.
 
 # Install
 
