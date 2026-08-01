@@ -35,12 +35,11 @@
  * filter object, or a REST endpoint with query parameters, is the same problem with
  * different packaging.
  *
- * Which package to reach for. This one is locked to Sequelize v6, and that is a
- * position rather than neglect: upstream Sequelize has sat in v7-alpha for years and is
- * asking for maintainers, so v6 is where the ground is stable. Services already on
- * Sequelize keep a maintained path and this package keeps evolving on top of it. For
- * NEW development, `@imqueue/pg-prisma` is the recommendation — same problems, a stack
- * that is going somewhere.
+ * Which version, and which package. This targets Sequelize v6 — mature, proven in
+ * production, and what this package is actively developed against. Sequelize v7 is
+ * still in alpha upstream, so v6 is the line to build on for now, and if v7 lands this
+ * follows it. If you would rather build on Prisma, `@imqueue/pg-prisma` covers the same
+ * ground for that stack. Both are supported: pick the ORM you want to live with.
  *
  * The `query` namespace and the serializable input types are what do it. Sequelize
  * writes a filter with ES symbols as its operators, and a symbol cannot survive a JSON
