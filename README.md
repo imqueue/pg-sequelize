@@ -75,7 +75,9 @@ field set straight through; an RPC method taking a filter object is the same pro
 # Docs
 
 Every exported symbol carries its own documentation, so an editor is the fastest
-reference. The wider ecosystem documentation is at
+reference. The same content is published, symbol by symbol, as the
+[API reference](https://imqueue.org/api/sequelize/latest/) — searchable, and linkable
+when you need to point someone at one thing. The wider ecosystem documentation is at
 [imqueue.org](https://imqueue.org/docs/).
 
 ## License
