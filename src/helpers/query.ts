@@ -371,7 +371,7 @@ export namespace query {
     /**
      * Merges given arrays of scalars making sure they contains unique values
      *
-     * @param args
+     * @param args - Arrays to merge.
      */
     function arrayMergeUnique(...args: any[][]): any[] {
         const result: any[] = [];
@@ -558,7 +558,8 @@ export namespace query {
     /**
      * Return names of primary key fields for a given model.
      *
-     * @param model
+     * @param model - Model to read the keys of.
+     * @returns The primary key attribute names, in declaration order.
      */
     export function primaryKeys(model: typeof BaseModel): string[] {
         const fields = model.rawAttributes;
@@ -590,8 +591,8 @@ export namespace query {
      * Returns foreign key map for a given pair of parent model and related
      * model.
      *
-     * @param parent
-     * @param model
+     * @param parent - Model on the referenced side.
+     * @param model - Model whose foreign keys are wanted.
      */
     export function foreignKeysMap(
         parent: typeof BaseModel,
@@ -624,12 +625,12 @@ export namespace query {
     /**
      * Prepares input for a given model and builds found relation arguments
      *
-     * @param input
-     * @param relations
-     * @param model
-     * @param fields
-     * @param transaction
-     * @param parent
+     * @param input - Values as the caller sent them.
+     * @param relations - Property names that are relations rather than columns.
+     * @param model - Model the values belong to.
+     * @param fields - Requested fields map, extended as relations are resolved.
+     * @param transaction - Transaction the writes run in.
+     * @param parent - Already-created parent entity, when there is one.
      */
     function prepareInput<T extends BaseModel<T>>(
         input: any,
@@ -704,14 +705,14 @@ export namespace query {
      * Recursively creates entity and all it's relations from a given input
      * using a given model.
      *
-     * @param model
-     * @param input
-     * @param fields
-     * @param transaction
-     * @param parentProperty
-     * @param noAppend
-     * @param parent
-     * @param doCommit
+     * @param model - Model to create.
+     * @param input - One entity, or several.
+     * @param fields - Requested fields map, deciding what comes back.
+     * @param transaction - Transaction to run in; one is opened when absent.
+     * @param parentProperty - Property on the parent this entity belongs to.
+     * @param noAppend - Skips attaching the result to the parent.
+     * @param parent - Parent entity to attach to.
+     * @param doCommit - Whether this call owns the transaction and commits it.
      */
     async function doCreateEntity<T extends BaseModel<T>, I>(
         model: typeof BaseModel,
@@ -878,7 +879,8 @@ export namespace query {
      * Ensures order by value is correct or returns default (ASC) if not. This
      * would prevent from any possible injections or errors.
      *
-     * @param value
+     * @param value - Direction as the caller sent it.
+     * @returns `desc` for anything that reads as descending, `asc` otherwise.
      */
     function toOrderDirection(value: any): OrderDirection {
         if (String(value).toLocaleLowerCase() === 'desc') {
@@ -889,9 +891,17 @@ export namespace query {
     }
 
     /**
-     * Constructs order by part of the query from a given input orderBy object
+     * Turns a serialized order into Sequelize's `order` option.
      *
-     * @param orderBy
+     * @remarks
+     * One entry per property, in the order the object lists them, so the caller
+     * controls precedence. Directions are normalised rather than trusted — anything
+     * that does not read as descending becomes ascending, which is what keeps a value
+     * off the wire out of the statement. An empty or absent order yields no `order`
+     * at all rather than an empty one.
+     *
+     * @param orderBy - Property-to-direction map from the caller.
+     * @returns Options carrying `order`, or empty options.
      */
     export function toOrderOptions<_T>(orderBy?: OrderByInput): FindOptions {
         const order: FindOptions = {};
@@ -919,9 +929,15 @@ export namespace query {
     }
 
     /**
-     * Adds or null check to a given where field values
+     * Matches a value, or no value at all.
      *
-     * @param value
+     * @remarks
+     * For the filter that means "these, and the rows where it is not set": the result
+     * is an `OR` over `null` and what you pass. Without it a `null` in a where clause
+     * compares rather than tests, and matches nothing.
+     *
+     * @param value - Value, or values, to accept alongside `null`.
+     * @returns A where fragment for one column.
      */
     export function orNull(value: string | string[]): Partial<FindOptions> {
         if (isArray(value)) {
@@ -936,7 +952,8 @@ export namespace query {
      * calls to replicate what sequelize does for us: building rich where
      * clauses.
      *
-     * @param filter
+     * @param filter - Serialized filter from the caller.
+     * @returns The `where` clause it describes.
      */
     function parseFilter<_T>(filter: FilterInput): FindOptions {
         const clause: FindOptions = {};
@@ -963,8 +980,8 @@ export namespace query {
      * This gives us an ability to simulate ILIKE, <, >, <=, >=, = right withing
      * given values in the filter.
      *
-     * @param prop
-     * @param data
+     * @param prop - Column or operator name.
+     * @param data - Value, or a nested filter.
      */
     function parseFilterValue<_T>(prop: string, data: any): FindOptions {
         const value: any = { [prop]: data };
@@ -992,7 +1009,8 @@ export namespace query {
 
     /**
      * Parses a given value
-     * @param value
+     * @param value - Raw value from the filter.
+     * @returns The value as a date when it reads as one, unchanged otherwise.
      */
     function parseValue(value: string) {
         try {
@@ -1184,7 +1202,8 @@ export namespace query {
      *
      * MUTATES and returns the filter it is given.
      *
-     * @param filter
+     * @param filter - Filter to rewrite in place.
+     * @returns The same filter, with ranges moved onto their columns.
      */
     export function withRangeFilters(filter: any) {
         if (!filter) {
@@ -1225,11 +1244,17 @@ export namespace query {
     }
 
     /**
-     * Looks up and returns include options in a given query using an array of
-     * given models as a search path
+     * Finds the include options for a model reached through a chain of includes.
      *
-     * @param queryOptions
-     * @param path
+     * @remarks
+     * The way to reach into a query that is already built — to add a where clause to a
+     * join, say, without rebuilding the whole thing. The path is walked one model at a
+     * time, and it is CONSUMED as that happens, so pass a copy if the caller still
+     * needs it.
+     *
+     * @param queryOptions - Query to search.
+     * @param path - Models to follow, outermost first.
+     * @returns The matching include options, or `null` when the path does not resolve.
      */
     export function getInclude(
         queryOptions: FindOptions,
@@ -1330,10 +1355,16 @@ export namespace query {
     }
 
     /**
-     * Removes given properties from the given object
+     * Deletes properties from an object.
      *
-     * @param obj
-     * @param props
+     * @remarks
+     * MUTATES what it is given and hands it back, so it composes into a call chain.
+     * A falsy argument is returned untouched, which makes it safe on an optional
+     * value.
+     *
+     * @param obj - Object to strip.
+     * @param props - Property names to delete.
+     * @returns The same object.
      */
     export function skip(obj: any, ...props: string[]) {
         if (!obj) {
@@ -1352,8 +1383,9 @@ export namespace query {
      * the given arguments of include options and overrides those are matching
      * by model and alias with the provided option.
      *
-     * @param queryOptions
-     * @param options
+     * @param queryOptions - Query whose includes are to be overridden.
+     * @param options - Include options to apply, matched by model and alias.
+     * @returns The same query options.
      */
     export function overrideJoin(
         queryOptions: FindOptions | CountOptions,

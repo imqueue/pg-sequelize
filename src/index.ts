@@ -34,9 +34,10 @@ export * from './types/index.js';
 const JS_EXT_RX = /\.js$/;
 
 /**
- * Returns all files list from a given directory
+ * Every file under a directory, recursively.
  *
- * @param dir
+ * @param dir - Directory to walk.
+ * @returns Absolute paths of every file found, directories excluded.
  */
 function walk(dir: string) {
     let results: string[] = [];
