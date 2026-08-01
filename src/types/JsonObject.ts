@@ -23,6 +23,19 @@
  */
 import { indexed } from '@imqueue/rpc';
 
+/**
+ * A free-form object, describable to `@imqueue/rpc`.
+ *
+ * @remarks
+ * For the places where the shape genuinely is not known ahead of time — a `jsonb`
+ * column, a settings blob, a passthrough payload. `@indexed` gives it an RPC
+ * description, which a bare `Record<string, any>` cannot have: the RPC layer builds
+ * its service description from decorated classes, so an anonymous type would arrive
+ * at the client as nothing at all.
+ *
+ * Reach for it only when that is true. Every property typed this way is one the
+ * generated client cannot check.
+ */
 @indexed(() => `[property: string]: any`)
 export class JsonObject {
     [property: string]: any;

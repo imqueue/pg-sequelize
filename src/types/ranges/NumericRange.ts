@@ -24,10 +24,24 @@
 import { property } from '@imqueue/rpc';
 import { type IRange } from './IRange.js';
 
+/**
+ * A range between two numbers, as an `@imqueue/rpc` type.
+ *
+ * @remarks
+ * The numeric counterpart of {@link DateRange}, and used the same way: filter
+ * `<column>Range` and `query.withRangeFilters` rewrites it onto `<column>`.
+ *
+ * @example
+ * ```typescript
+ * const filter = { priceRange: { start: 10, end: 100 } } as FilterInput;
+ * ```
+ */
 export class NumericRange implements IRange {
+    /** Lower bound of the range. */
     @property('number')
     public start: number;
 
+    /** Upper bound of the range. */
     @property('number')
     public end: number;
 }
