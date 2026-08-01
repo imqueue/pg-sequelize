@@ -24,10 +24,32 @@
 import { property } from '@imqueue/rpc';
 import { type IRange } from './IRange.js';
 
+/**
+ * A range between two dates, as an `@imqueue/rpc` type.
+ *
+ * @remarks
+ * Accepts a `Date` or an ISO-8601 string on either bound, because a remote caller
+ * has only the string — a `Date` does not survive JSON.
+ *
+ * Used through the `Range`-suffix convention rather than by naming the column
+ * directly: filter `<column>Range` and `query.withRangeFilters` moves it onto
+ * `<column>`. Passing both forms for one column throws a `TypeError` rather than
+ * silently preferring one.
+ *
+ * @example
+ * ```typescript
+ * // reservations whose `duration` column falls inside the window
+ * const filter = {
+ *     durationRange: { start: '2026-08-01', end: '2026-08-31' },
+ * } as FilterInput;
+ * ```
+ */
 export class DateRange implements IRange {
+    /** Start of the range — a `Date`, or an ISO-8601 string from a remote caller. */
     @property('string | Date')
     public start: string | Date;
 
+    /** End of the range — a `Date`, or an ISO-8601 string from a remote caller. */
     @property('string | Date')
     public end: string | Date;
 }

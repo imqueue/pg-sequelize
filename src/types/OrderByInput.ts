@@ -24,17 +24,51 @@
 import { indexed } from '@imqueue/rpc';
 
 /**
- * Allowed ordering directions
+ * The two directions a column can be ordered in.
+ *
+ * @remarks
+ * The values are the SQL keywords, so they can be handed to Sequelize as they are.
  */
 export enum OrderDirection {
+    /** Ascending — also what any unrecognised direction becomes. */
     asc = 'ASC',
+    /** Descending. */
     desc = 'DESC',
 }
 
+/**
+ * The `OrderDirection` values as an `@imqueue/rpc` type description.
+ *
+ * @remarks
+ * `'ASC' | 'DESC'`, built from the enum so the description cannot drift from it.
+ * Used in the `@indexed` description of {@link OrderByInput}, and available for your
+ * own `@property` declarations that accept a direction.
+ */
 export const ENUM_ORDER_DIRECTION = `'${OrderDirection.asc}' | '${
     OrderDirection.desc
 }'`;
 
+/**
+ * Which columns to order by, and in which direction.
+ *
+ * @remarks
+ * Keyed by column name; `query.toOrderOptions` turns it into Sequelize's `order`
+ * array, preserving the key order of the object, so the first key is the primary
+ * sort.
+ *
+ * Direction values are coerced rather than validated: anything that does not read
+ * as `desc`, case-insensitively, becomes ascending. That is deliberate — the value
+ * arrives from a remote caller and ends up in SQL, so an unrecognised direction has
+ * to become a safe default rather than being passed through. It does mean a typo
+ * silently sorts the other way.
+ *
+ * Column names are NOT coerced, and they reach the query as given.
+ *
+ * @example
+ * ```typescript
+ * const orderBy: OrderByInput = { type: OrderDirection.asc, createdAt: OrderDirection.desc };
+ * ```
+ */
 @indexed(() => `[fieldName: string]: ${ENUM_ORDER_DIRECTION}`)
 export class OrderByInput {
     [fieldName: string]: OrderDirection;

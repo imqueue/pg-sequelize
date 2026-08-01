@@ -21,7 +21,27 @@
  * purchase a proprietary commercial license. Please contact us at
  * <support@imqueue.com> to get commercial licensing options.
  */
+/**
+ * The shape every range filter shares: a start and an end.
+ *
+ * @remarks
+ * `query.withRangeFilters` recognises a range by exactly these two keys, in either
+ * order, on a filter property whose name ends in `Range`. So the property NAMES are
+ * the contract — an object with any other key set is left alone and filtered as an
+ * ordinary value.
+ *
+ * The convention it implements: a caller filters `durationRange` and the helper
+ * rewrites it onto the real `duration` column. Sending both `duration` and
+ * `durationRange` is an error rather than a merge — see
+ * {@link DateRange} for the worked example.
+ *
+ * Deliberately untyped at `any`, so a range of anything Postgres supports can
+ * implement it; {@link DateRange} and {@link NumericRange} are the two the package
+ * ships.
+ */
 export interface IRange {
+    /** Lower bound of the range. */
     start: any;
+    /** Upper bound of the range. */
     end: any;
 }
