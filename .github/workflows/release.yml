@@ -38,5 +38,7 @@ jobs:
       tag: ${{ inputs.tag || '' }}
       dry-run: ${{ inputs.dry-run || false }}
       blurb: >-
-        `@imqueue/sequelize` — Sequelize ORM refines for @imqueue. Part of the @imqueue framework
+        `@imqueue/sequelize` turns a query described as data — filters, paging, ordering and the
+        requested fields — into one efficient Sequelize statement, with database views as models
+        and the Postgres index options Sequelize cannot express. Part of the @imqueue framework
         for Node.js & TypeScript microservices.
