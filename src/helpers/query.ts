@@ -431,7 +431,7 @@ export namespace query {
      * `attributes` plus a nested `include` for every relation the map mentions,
      * recursing into each level, and adds the foreign keys a join needs whether or
      * not they were requested. Its rest parameter then merges the fragments the
-     * sibling helpers return — this is the intended shape of a paginated read:
+     * sibling helpers return, which is the intended shape of a paginated read.
      *
      * A value in the map that is not `false` doubles as a filter for that column, so
      * a fields map can carry a where clause; see {@link FieldsInput} for why presence

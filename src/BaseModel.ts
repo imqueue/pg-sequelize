@@ -21,66 +21,6 @@
  * purchase a proprietary commercial license. Please contact us at
  * <support@imqueue.com> to get commercial licensing options.
  */
-/**
- * This modules provides several additional features on top of
- * original Sequelize ORM implementation:
- *  1. Support of views. To define a model as a view in database, use
- *     @View(CREATE_VIEW_SQL: string) decorator factory
- *     @example
- *     ~~~typescript
- *     @View(
- *       `CREATE OR REPLACE VIEW "ProductRevenue" AS
- *        SELECT "productId" as "id", SUM("payment") as "revenue"
- *        FROM "Order" GROUP BY "productId"`
- *     )
- *     export class ProductRevenue extends BaseModel<ProductRevenue> {
- *         @Column(DataType.BIGINT)
- *         @PrimaryKey
- *         public readonly id: number;
- *
- *         @Column(DataType.NUMBER({ decimals: 2, precision: 12 }}))
- *         public readonly revenue: number;
- *     }
- *     ~~~
- *     All views would be automatically synced after all tables synced, when
- *     Sequelize.sync() called.
- *
- *  2. Support of { returning: [field1, field2, ...] } instead of
- *     { returning: boolean }. This gives an ability to fetch and return only
- *     requested properties during insert/update operations. By the way it
- *     would require to cast the proper options type passed to corresponding
- *     sequelize operation. Those types have been mimic in this module, so
- *     them should be exported from it:
- *     @example
- *     ~~~typescript
- *     import { SaveOptions, Scope, UpdateOptions } from './orm';
- *     //
- *     // ... init models and somewhere inside async function:
- *     //
- *     const scope = new Scope({
- *       name: 'test',
- *       description: 'Test Scope',
- *       schema: {},
- *     });
- *     // take into account type casting to prevent TS errors:
- *     await scope.save({ returning: ['id', 'name'] } as SaveOptions);
- *     console.log(JSON.stringify(scope)); // {"id":2,"name":"test"}
- *     // or
- *     const [count, scopes] = await Scope.update({ name: "TEST" }, {
- *       where: { id: 2 },
- *       // take into account type casting to prevent TS errors:
- *       returning: ['id', 'name'] as UpdateOptions,
- *     });
- *     console.log(JSON.stringify(scopes)); // {"id":2,"name":"TEST"}
- *     ~~~
- *     This behavior gives an ability to reduce data exchange between DB and
- *     application as well as between app and external source as far as
- *     serialized model will contain only requested data (if any remote source
- *     applicable).
- *     So, whenever you found TS error about returning option on your code,
- *     simply cast options to the same type name as error states, but import
- *     this type from this module.
- */
 import { Graph } from './Graph.js';
 
 // Explicit named re-exports instead of `export * from` a CommonJS
@@ -275,6 +215,18 @@ import E = query.E;
 import type { ModelAttributeColumnOptions } from 'sequelize/types/model';
 import type { TableName } from 'sequelize/types/dialects/abstract/query-interface';
 
+/**
+ * Replaces every member of `T` that `R` also declares with `R`'s version of it.
+ *
+ * @remarks
+ * The mechanism behind each widened option type in this module. Sequelize types
+ * `returning` as a boolean; this package needs it to accept a column list as well,
+ * and intersecting the two would leave a member that has to be both. Removing the
+ * keys `R` redeclares before intersecting is what lets the override win instead.
+ *
+ * `T` is the type to start from and `R` the members to override it with, so the
+ * widened save options are Sequelize's own with only `returning` replaced.
+ */
 export type Modify<T, R> = Pick<T, Exclude<keyof T, keyof R>> & R;
 
 /**
@@ -290,48 +242,262 @@ const RX_RETURNING = /returning\s+\*/i;
 const ALIAS_PATH_DELIMITER = '->';
 
 /**
- * Extends original SyncOptions from Sequelize to add view support
+ * Sequelize's own sync options, extended for views and column indices.
+ *
+ * @remarks
+ * Passing nothing is the common case: tables, then views, then indices. The two
+ * additions worth knowing are `withNoViews`, for a deployment where views are
+ * managed outside the application, and `withoutDrop`, for views that depend on each
+ * other.
  */
 export interface SyncOptions extends SyncOptionsOrigin {
+    /**
+     * Has no effect when passed to a sync call.
+     *
+     * @remarks
+     * Whether a model is a view is decided by the model, not by the caller: the
+     * `View` and `DynamicView` decorators set this flag in the model's own options,
+     * and that is the only place it is ever read from. It is declared here because
+     * a model's options and a sync call's options are the same type, not because
+     * passing it does anything.
+     *
+     * @deprecated Decorate the model instead; passing this is ignored.
+     */
     treatAsView?: boolean;
+    /**
+     * Syncs tables and indices only, leaving every view untouched.
+     *
+     * @remarks
+     * For a database where views are owned by migrations or by a DBA rather than by
+     * the model definitions, and for start-up paths that should not drop and rebuild
+     * every view.
+     */
     withNoViews?: boolean;
+    /**
+     * Replaces each view in place instead of dropping it first.
+     *
+     * @remarks
+     * The default drops a view and creates it again, which fails as soon as another
+     * view selects from it — Postgres will not drop a view something depends on.
+     * With this set, only the model's own create statement runs, so it has to be
+     * written as `CREATE OR REPLACE VIEW` to succeed against a view that already
+     * exists. Postgres will still refuse a replacement whose output columns differ
+     * in name, type or order, so a column added to the middle of a view needs the
+     * drop.
+     */
     withoutDrop?: boolean;
 }
+/**
+ * Sequelize's own find options, plus the parameters of a dynamic view.
+ *
+ * @remarks
+ * Accepted by every finder on `BaseModel`. The single addition is ignored unless the
+ * model was declared with `DynamicView`.
+ */
 export interface FindOptions extends FindOptionsOrigin {
+    /**
+     * Values for the placeholders in a dynamic view's definition.
+     *
+     * @remarks
+     * Merged over the defaults the decorator supplied, then substituted into the view
+     * SQL before the statement runs — which is how one model can be selected from
+     * with different parameters. Values are escaped on the way in, and one reached
+     * through an `include` is honoured too.
+     */
     viewParams?: ViewParams;
 }
+/**
+ * What a model's `options` actually holds on a model of this package.
+ *
+ * @remarks
+ * Sequelize's own init options together with the view fields the decorators write
+ * into them, which is why reading `Model.options` for `treatAsView`,
+ * `viewDefinition` or `viewParams` type-checks here and does not in plain sequelize.
+ */
 export interface InitOptions
     extends InitOptionsOrigin, IDynamicViewDefineOptions {}
+/**
+ * Widens `returning` so it can name the columns to fetch back, not just ask whether
+ * to fetch any.
+ *
+ * @remarks
+ * Sequelize types `returning` as a boolean: every column, or none. Postgres can
+ * return a subset, and a service usually wants exactly the fields its caller asked
+ * for — so this package accepts a list of column names and rewrites the
+ * `RETURNING *` in the generated statement to name just those.
+ *
+ * Two things follow. Less data crosses both hops: the database returns fewer
+ * columns, and the instance remembers the list, so serializing it emits only those
+ * properties. And because the option is widened rather than replaced, `true` and
+ * `false` keep working exactly as before. An empty array is treated as `false`,
+ * since a statement returning no columns is not what anyone means by it.
+ *
+ * The cost is a cast at the call site, and the mimicked option types in this module
+ * are what to cast to — they exist for this and nothing else. Whenever TypeScript
+ * objects to a `returning` array, import the type it names from `@imqueue/sequelize`
+ * rather than from `sequelize`. Use `restoreSerialization()` to forget the list
+ * again.
+ *
+ * @example
+ * ```typescript
+ * const scope = new Scope({ name: 'test', description: 'Test', schema: {} });
+ *
+ * await scope.save({ returning: ['id', 'name'] } as SaveOptions);
+ * console.log(JSON.stringify(scope)); // {"id":2,"name":"test"}
+ *
+ * const [count, scopes] = await Scope.update({ name: 'TEST' }, {
+ *     where: { id: 2 },
+ *     returning: ['id', 'name'],
+ * } as UpdateOptions);
+ * console.log(JSON.stringify(scopes[0])); // {"id":2,"name":"TEST"}
+ * ```
+ */
 export interface ReturningOptions {
+    /**
+     * `true` for every column, `false` for none, or the names of the columns to
+     * fetch back.
+     */
     returning?: boolean | string[];
 }
+/**
+ * The shape sequelize's resolved include tree actually has, as this module reads it.
+ *
+ * @remarks
+ * Sequelize builds this while working out an `include`, and does not declare it in
+ * its public types. It is declared here because the select-query override walks the
+ * tree looking for dynamic views nested inside a join, and needs each node's alias to
+ * rewrite the right part of the statement. Of no use to application code.
+ */
 export interface WithIncludeMap extends InitOptions {
+    /** The resolved options of each included association, keyed by property name. */
     includeMap?: {
         [propertyName: string]: WithIncludeMap & IncludeOptions & FindOptions;
     };
+    /** The property names present in `includeMap`. */
     includeNames?: string[];
+    /** The node this one was included from. */
     parent: WithIncludeMap;
 }
+/**
+ * Names a model class by the instance type it produces.
+ *
+ * @remarks
+ * Used where a helper takes a model class rather than an instance. The constructor is
+ * declared without arguments because the type is there to identify a class, not to
+ * build anything with it — sequelize instantiates models itself.
+ */
 export type IModelClass<T extends BaseModel<T>> = new () => T;
 
+/**
+ * Options for `upsert()`, with `returning` widened to accept a column list.
+ *
+ * @remarks
+ * Cast to this at the call site when TypeScript objects to a `returning`
+ * column list; {@link ReturningOptions} explains what the list does.
+ */
 export type UpsertOptions = Modify<UpsertOptionsOrigin, ReturningOptions>;
+/**
+ * Options for `build()`, with `returning` widened to accept a column list.
+ *
+ * @remarks
+ * Cast to this at the call site when TypeScript objects to a `returning`
+ * column list; {@link ReturningOptions} explains what the list does.
+ */
 export type BuildOptions = Modify<BuildOptionsOrigin, ReturningOptions>;
+/**
+ * Options for `bulkCreate()`, with `returning` widened to accept a column list.
+ *
+ * @remarks
+ * Cast to this at the call site when TypeScript objects to a `returning`
+ * column list; {@link ReturningOptions} explains what the list does.
+ */
 export type BulkCreateOptions = Modify<
     BulkCreateOptionsOrigin,
     ReturningOptions
 >;
+/**
+ * Options for a raw `query()`, with `returning` widened to accept a column list.
+ *
+ * @remarks
+ * Cast to this at the call site when TypeScript objects to a `returning`
+ * column list; {@link ReturningOptions} explains what the list does.
+ */
 export type QueryOptions = Modify<QueryOptionsOrigin, ReturningOptions>;
+/**
+ * Options for the static `update()`, with `returning` widened to accept a column
+ * list.
+ *
+ * @remarks
+ * Cast to this at the call site when TypeScript objects to a `returning`
+ * column list; {@link ReturningOptions} explains what the list does.
+ */
 export type UpdateOptions = Modify<UpdateOptionsOrigin, ReturningOptions>;
+/**
+ * Options for `create()`, with `returning` widened to accept a column list.
+ *
+ * @remarks
+ * Cast to this at the call site when TypeScript objects to a `returning`
+ * column list; {@link ReturningOptions} explains what the list does.
+ */
 export type CreateOptions = Modify<CreateOptionsOrigin, ReturningOptions>;
+/**
+ * Options for an instance's `save()`, with `returning` widened to accept a column
+ * list.
+ *
+ * @remarks
+ * Cast to this at the call site when TypeScript objects to a `returning`
+ * column list; {@link ReturningOptions} explains what the list does.
+ */
 export type SaveOptions = Modify<InstanceSaveOptionsOrigin, ReturningOptions>;
 
 /**
- * Extends original QueryInterface from sequelize to add support of create/drop
- * views.
+ * Sequelize's query interface, extended with view creation and removal.
+ *
+ * @remarks
+ * The type a migration works against, and the most imported symbol in this package.
+ * Everything sequelize's own interface offers is here unchanged; `createView` and
+ * `dropView` are the additions, since sequelize has no equivalent.
+ *
+ * The instance handed out by `Sequelize.getQueryInterface()` is also wrapped in three
+ * ways that do not show up in this type: every write method treats an empty
+ * `returning` array as `false`, `query()` rewrites `RETURNING *` when given a column
+ * list, and the select-query generator substitutes a dynamic view's definition into
+ * the statement.
  */
 export interface QueryInterface extends QueryInterfaceOrigin {
+    /** The connection this interface belongs to. */
     sequelize: Sequelize;
+    /**
+     * Drops a view, if it exists.
+     *
+     * @remarks
+     * Issues `DROP VIEW IF EXISTS`, so it is safe to call for a view that was never
+     * created. A materialized view needs a different statement and is not covered.
+     *
+     * @param viewName - Name of the view to drop.
+     * @param options - `cascade` also drops whatever depends on the view.
+     * @returns The result of the drop statement.
+     */
     dropView(viewName: string, options?: DropOptions): Promise<any>;
+    /**
+     * Creates a view from a complete SQL definition.
+     *
+     * @remarks
+     * The definition is executed exactly as given, so it carries its own `CREATE VIEW`
+     * or `CREATE OR REPLACE VIEW` keywords. The name is checked against the one the
+     * statement declares before anything runs, which catches registering one view's
+     * SQL under another view's name — a copy-paste mistake that would otherwise
+     * create the wrong relation and leave the model pointing at nothing.
+     *
+     * The check recognises a plain or temporary view. A `CREATE MATERIALIZED VIEW`
+     * definition is rejected by it, and would not survive the drop-and-create cycle
+     * either, so materialized views are outside what this supports today.
+     *
+     * @param viewName - The name the definition is expected to declare.
+     * @param viewDefinition - The complete create statement.
+     * @returns The result of executing the definition.
+     * @throws TypeError when the definition does not declare `viewName`.
+     */
     createView(viewName: string, viewDefinition: string): Promise<any>;
 }
 
@@ -717,12 +883,47 @@ function override(queryInterface: QueryInterfaceOrigin): QueryInterface {
 }
 
 /**
- * Overriding sequelize behavior to support views
+ * Sequelize's own connection class, taught about views, column indices and the
+ * widened `returning` option.
+ *
+ * @remarks
+ * Returned by `database()`, which is how a service normally gets one. Four things
+ * differ from the class it extends.
+ *
+ * Views are first-class: a model declared with `View` or `DynamicView` is created as
+ * a view after every table exists, dropped as a view, and skipped by the table sync.
+ * A dynamic view goes further — its definition carries `@{name}` placeholders, and
+ * the select-query generator substitutes them into the statement at query time, so
+ * one model can be read with different parameters, including when it is reached
+ * through a join.
+ *
+ * Column indices declared with `ColumnIndex` or `NullableIndex` are created as part
+ * of the same sync, which sequelize has no notion of at all.
+ *
+ * `returning` may name columns rather than being a boolean, both on the write methods
+ * and on a raw `query()`.
+ *
+ * @example
+ * ```typescript
+ * const orm = database(dbConfig);       // a Sequelize, already connected
+ *
+ * await orm.sync();                     // tables, then views, then indices
+ * await orm.sync({ withNoViews: true }); // tables and indices only
+ * ```
  */
 export class Sequelize extends SequelizeOrigin {
     /**
-     * Returns an instance of QueryInterface.
-     * Supports views.
+     * The query interface for this connection, with view support and the widened
+     * `returning` option.
+     *
+     * @remarks
+     * Sequelize's own interface is wrapped once, the first time this is called, and
+     * the same wrapped object is returned afterwards. The wrapper adds `createView`
+     * and `dropView`, makes every write method treat an empty `returning` array as
+     * `false`, and teaches the select-query generator to substitute a dynamic view's
+     * definition into the statement.
+     *
+     * @returns The wrapped query interface.
      */
     public override getQueryInterface(): QueryInterface {
         const self: any = this;
@@ -737,11 +938,18 @@ export class Sequelize extends SequelizeOrigin {
     }
 
     /**
-     * Overrides original sequelize define method. Supports views.
+     * Defines a model from an attribute map rather than from a decorated class.
      *
-     * @param modelName
-     * @param attributes
-     * @param options
+     * @remarks
+     * Sequelize's own `define()` builds on its `Model`; this one builds on
+     * `BaseModel`, so a model defined this way gets the view handling, the widened
+     * `returning` and the serialization of this package. Decorated classes registered
+     * through `addModels()` are the usual route, and the one `database()` takes.
+     *
+     * @param modelName - Name to register the model under.
+     * @param attributes - Column definitions, as sequelize's own `define` takes them.
+     * @param options - Model options. `modelName` and `sequelize` are filled in.
+     * @returns The generated model class.
      */
     public override define<TInstance, _TAttributes>(
         modelName: string,
@@ -761,28 +969,51 @@ export class Sequelize extends SequelizeOrigin {
     }
 
     /**
-     * Sync all defined models to the DB. Including views!
+     * Creates every table, then every view, then every column index.
      *
-     * @param options
+     * @remarks
+     * Sequelize's own sync knows about tables only. This one runs it first, then
+     * replaces the views declared with `View` or `DynamicView`, then creates the
+     * indices declared with `ColumnIndex` or `NullableIndex`. Views come before
+     * indices so an index declared on a materialized view has something to attach to,
+     * and both come after the tables a view selects from.
+     *
+     * The three passes used to overlap. The index pass was started but never waited
+     * for and its result was discarded, so this resolved while indices were still
+     * being created, and a failure in that pass became an unhandled rejection —
+     * fatal on any current Node — instead of rejecting here. The options were not
+     * forwarded to the view pass either, which left `withoutDrop` doing nothing. All
+     * three are fixed.
+     *
+     * @param options - Sequelize's own sync options, plus `withNoViews` and
+     *   `withoutDrop`.
+     * @returns The connection, once every pass has finished.
      */
     public override sync(options?: SyncOptions): Promise<any> {
-        const withViews = !options || (options && !options.withNoViews);
-        const syncResult = super.sync(options);
+        const withViews = !(options && options.withNoViews);
 
-        syncResult.then(async result => {
-            await this.syncIndices(options);
-            return result;
-        });
+        return (super.sync(options) as unknown as Promise<any>).then(
+            async result => {
+                if (withViews) {
+                    await this.syncViews(options);
+                }
 
-        return (withViews
-            ? syncResult.then(() => this.syncViews())
-            : syncResult) as unknown as Promise<any>;
+                await this.syncIndices(options);
+
+                return result;
+            },
+        );
     }
 
     /**
-     * Synchronizes indices defined for models
+     * Creates the column indices declared across every registered model.
      *
-     * @param options
+     * @remarks
+     * Run by `sync()` once the tables and views are in place. Only models that
+     * declare at least one index are visited, and the models are done concurrently.
+     *
+     * @param options - Passed to each model, which does not currently read it.
+     * @returns Resolves once every index of every model exists.
      */
     public syncIndices(options?: SyncOptions): Promise<any> {
         return Promise.all(
@@ -793,7 +1024,16 @@ export class Sequelize extends SequelizeOrigin {
     }
 
     /**
-     * Syncs all defined views to the DB.
+     * Replaces every model that is declared as a view.
+     *
+     * @remarks
+     * Each view is dropped and created again unless `withoutDrop` is set, and the
+     * views are done concurrently — so a view that selects from another view has no
+     * ordering guarantee, and the drop of the one it depends on would fail anyway.
+     * That combination is what `withoutDrop` is for.
+     *
+     * @param options - `withoutDrop` skips the drop; nothing else is read.
+     * @returns Resolves once every view has been replaced.
      */
     public syncViews(options?: SyncOptions): Promise<any> {
         const views = this.getViews();
@@ -801,6 +1041,12 @@ export class Sequelize extends SequelizeOrigin {
         return Promise.all(views.map(view => view.syncView(options)));
     }
 
+    /**
+     * The registered models that declare at least one column index.
+     *
+     * @returns Model classes with a non-empty `indices` option, in registration
+     *   order.
+     */
     public getModelsWithIndices() {
         const models: (typeof BaseModel)[] = [];
 
@@ -819,7 +1065,14 @@ export class Sequelize extends SequelizeOrigin {
     }
 
     /**
-     * Returns list of all defined as views models.
+     * The registered models that are declared as views.
+     *
+     * @remarks
+     * A model counts as a view once `View` or `DynamicView` has put `treatAsView` in
+     * its options, which is the same flag that makes the table sync skip it and
+     * `drop()` issue `DROP VIEW`.
+     *
+     * @returns Model classes flagged as views, in registration order.
      */
     public getViews(): (typeof BaseModel)[] {
         const views: (typeof BaseModel)[] = [];
@@ -834,11 +1087,21 @@ export class Sequelize extends SequelizeOrigin {
     }
 
     /**
-     * Overriding native query() method to support `{ returning: string[] }`
-     * option for queries in a proper way
+     * Runs a raw statement, honouring a `returning` column list.
      *
-     * @param sqlQuery
-     * @param options
+     * @remarks
+     * Given a non-empty `returning` array, the `RETURNING *` in the statement is
+     * rewritten to name exactly those columns, and every returned model instance
+     * remembers the list, so serializing it emits only those properties. Everything
+     * else is sequelize's own `query()`.
+     *
+     * The rewrite is textual and looks for `RETURNING *` specifically, so a statement
+     * that already names its columns is left alone — and one that has no `RETURNING`
+     * at all is not given one.
+     *
+     * @param sqlQuery - The statement, or a statement with its bind values.
+     * @param options - Query options, where `returning` may be a column list.
+     * @returns Whatever sequelize's own `query()` returns for these options.
      */
     public override query(
         sqlQuery: string | { query: string; values: any[] },
@@ -888,13 +1151,50 @@ export class Sequelize extends SequelizeOrigin {
 }
 
 /**
- * Base Model class extends native sequelize Model class
+ * The class every model in an `@imqueue` service extends.
+ *
+ * @remarks
+ * Sequelize's own `Model` with four additions.
+ *
+ * Views: a model declared with `View` or `DynamicView` is created and dropped as a
+ * view, skipped by the table sync, and has its numeric columns cast back to numbers
+ * after every finder, since a view returns them as strings.
+ *
+ * Indices: `ColumnIndex` and `NullableIndex` declarations become `CREATE INDEX`
+ * statements at sync time, which plain sequelize cannot express.
+ *
+ * Serialization: `toJSON()` honours the `returning` column list left behind by the
+ * last write, and picks up associated instances that the loaded attributes do not
+ * already cover.
+ *
+ * Associations as a graph: `toGraph()` walks them transitively, so a cycle can be
+ * found before a query walks into it.
+ *
+ * @example
+ * ```typescript
+ * @Table
+ * export class Lead extends BaseModel<Lead> {
+ *     @PrimaryKey
+ *     @AutoIncrement
+ *     @Column(DataType.BIGINT)
+ *     public readonly id: number;
+ *
+ *     @AllowNull(false)
+ *     @Column(DataType.STRING)
+ *     public name: string;
+ *
+ *     @CreatedBy()
+ *     @Column(DataType.BIGINT)
+ *     public createdBy: number;
+ * }
+ * ```
  */
 export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     /**
-     * Override native drop method to add support of view drops
+     * Drops this model's relation: `DROP VIEW` for a view, `DROP TABLE` otherwise.
      *
-     * @param options
+     * @param options - Sequelize's own drop options; `cascade` applies to both.
+     * @returns The result of the drop statement.
      */
     public static override drop(options?: DropOptions): Promise<any> {
         const self: any = this;
@@ -906,11 +1206,15 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Sync this Model to the DB, that is create the table. Upon success, the
-     * callback will be called with the model instance (this).
-     * Supports views.
+     * Creates this model's table, or does nothing when the model is a view.
      *
-     * @param options
+     * @remarks
+     * A view is skipped deliberately: it normally selects from tables that do not
+     * exist yet, so views are left to the second pass `Sequelize.sync()` runs once
+     * every table is there.
+     *
+     * @param options - Sequelize's own sync options.
+     * @returns Resolves when the table exists, or immediately for a view.
      */
     public static override sync(options?: SyncOptions): Promise<any> {
         if ((this as any).options && (this as any).options.treatAsView) {
@@ -922,9 +1226,18 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Syncs view to the DB.
+     * Creates this view, replacing whatever definition is in the database.
      *
-     * @param options
+     * @remarks
+     * Drops the view first unless `withoutDrop` is set. That drop is why a view
+     * another view selects from cannot be replaced this way, and why `withoutDrop`
+     * exists.
+     *
+     * Only meaningful on a model declared with `View` or `DynamicView` — anything
+     * else has no definition to create.
+     *
+     * @param options - `withoutDrop` skips the drop.
+     * @returns The result of the create statement.
      */
     public static syncView(options?: SyncOptions): Promise<any> {
         const self: any = this;
@@ -949,10 +1262,20 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Returns view definition SQL string.
+     * This view's SQL, with any dynamic parameters substituted in.
      *
-     * @param viewParams
-     * @param asQuery
+     * @remarks
+     * Parameters are merged in two layers: the defaults given to `DynamicView`, then
+     * whatever is passed here. Each `@{name}` placeholder in the definition is
+     * replaced with the escaped value, which is what makes it safe to pass a caller's
+     * input — though only numbers and strings render as values, and everything else,
+     * including a missing parameter, becomes `NULL`.
+     *
+     * @param viewParams - Values overriding the decorated defaults.
+     * @param asQuery - Strips the leading create-view clause, leaving a statement
+     *   that can be embedded as a subquery. This is how a dynamic view is spliced
+     *   into a `FROM` or a join.
+     * @returns The definition, whitespace-normalised and ending in a semicolon.
      */
     public static getViewDefinition(
         viewParams: ViewParams = {},
@@ -985,15 +1308,22 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Synchronizes configured indices on this model
+     * Creates every column index declared on this model.
      *
-     * @param options
+     * @remarks
+     * Reads the declarations left behind by `ColumnIndex` and `NullableIndex` and
+     * creates them concurrently. A model that declares none resolves immediately —
+     * it used to throw, which made this unsafe to call on anything but a model
+     * `Sequelize.getModelsWithIndices()` had already picked out.
+     *
+     * @param _options - Accepted for symmetry with the other sync methods, not read.
+     * @returns Resolves once every index of this model exists.
      */
     public static syncIndices(_options?: SyncOptions): Promise<any> {
         const indices: {
             column: string;
             options: ColumnIndexOptions;
-        }[] = (this.options as any).indices;
+        }[] = (this.options as any).indices || [];
 
         return Promise.all(
             indices.map((indexOptions, i) =>
@@ -1007,13 +1337,25 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Builds and executes index definition SQL query for the given
-     * column and options. Position is used for auto index naming when
-     * index name is auto-generated
+     * Builds and runs the statements that create one column index.
      *
-     * @param column
-     * @param options
-     * @param position
+     * @remarks
+     * Each `ColumnIndexOptions` field maps to a clause of the `CREATE INDEX`. The
+     * index is dropped first unless `safe` is set, so the declaration in the code
+     * always wins over what is in the database; with `safe`, an existing index is
+     * left exactly as it is and only a missing one is created.
+     *
+     * The two statements used to be attached to the same already-resolved promise
+     * rather than chained onto each other, so they were issued together and this
+     * returned before either had run — the create could reach the server ahead of the
+     * drop, and a failure of either became an unhandled rejection rather than
+     * rejecting here. They now run in order, and the returned promise waits for them.
+     *
+     * @param column - Column the index is declared on.
+     * @param options - The declared index options.
+     * @param position - Ordinal used to name the index when `name` is not given,
+     *   which is what keeps two indices on one column from colliding.
+     * @returns Resolves once the index exists.
      */
     public static syncIndex(
         column: string,
@@ -1023,12 +1365,12 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
         const self: any = this;
         const indexName: string =
             options.name || `${this.getTableName()}_${column}_idx${position}`;
-        const chain = Promise.resolve(true);
         // noinspection TypeScriptUnresolvedVariable
         const queryInterface = self.QueryInterface || self.queryInterface;
+        let chain: Promise<any> = Promise.resolve();
 
         if (!options.safe) {
-            chain.then(() =>
+            chain = chain.then(() =>
                 queryInterface.sequelize.query(`
                 DROP INDEX${
                     options.concurrently ? ' CONCURRENTLY' : ''
@@ -1039,7 +1381,7 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
 
         // tslint:disable-next-line:max-line-length
         // noinspection TypeScriptUnresolvedVariable,PointlessBooleanExpressionJS
-        chain.then(() =>
+        chain = chain.then(() =>
             queryInterface.sequelize.query(`
                 CREATE${options.unique ? ' UNIQUE' : ''} INDEX${
                     options.concurrently ? ' CONCURRENTLY' : ''
@@ -1075,6 +1417,9 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
      * @remarks
      * Delegates to Sequelize's own `findAll`, then re-maps numeric columns, which
      * a view returns as strings.
+     *
+     * @param options - Find options; `viewParams` applies to a dynamic view.
+     * @returns The matching instances.
      */
     public static override findAll<M>(options?: FindOptions): Promise<M[]> {
         const method = super.findAll;
@@ -1097,8 +1442,15 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
 
     // noinspection JSAnnotator
     /**
-     * Search for a single instance by its primary key. This applies LIMIT 1,
-     * so the listener will always be called with a single instance.
+     * Finds one instance by primary key.
+     *
+     * @remarks
+     * Sequelize's own `findByPk` with one addition: on a model declared as a view, the
+     * numeric columns of the result are cast back to numbers.
+     *
+     * @param identifier - Primary key value to look for.
+     * @param options - Find options, minus `where`, which the key supplies.
+     * @returns The instance, or `null` when no row matches.
      */
     public static override findByPk<M>(
         identifier?: Identifier,
@@ -1126,8 +1478,14 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
 
     // noinspection JSAnnotator
     /**
-     * Search for a single instance. This applies LIMIT 1, so the listener will
-     * always be called with a single instance.
+     * Finds the first instance matching the options.
+     *
+     * @remarks
+     * Sequelize's own `findOne` with one addition: on a model declared as a view, the
+     * numeric columns of the result are cast back to numbers.
+     *
+     * @param options - Find options; `viewParams` applies to a dynamic view.
+     * @returns The instance, or `null` when no row matches.
      */
     public static override findOne<M>(
         options?: FindOptions,
@@ -1149,8 +1507,15 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Restores native serialization state, clearing returning options
-     * saved during insert/update query execution
+     * Forgets the `returning` column list, so serializing emits every loaded column
+     * again.
+     *
+     * @remarks
+     * A write that named its returning columns leaves that list on the instance, and
+     * `toJSON()` honours it from then on. Call this when the same instance is reused
+     * for something that should serialize in full.
+     *
+     * @returns This instance, for chaining.
      */
     public restoreSerialization() {
         // noinspection TypeScriptUnresolvedVariable
@@ -1160,10 +1525,16 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Appends child node to this entity as if it was joined through query
+     * Attaches related data to this instance as though it had been joined in.
      *
-     * @param name
-     * @param data
+     * @remarks
+     * Sets the property, and when a `returning` list is in force adds the name to it
+     * so the property survives serialization. That is the point of it: data fetched
+     * by a second query would otherwise be dropped by `toJSON()`.
+     *
+     * @param name - Property to set, normally an association name.
+     * @param data - What to attach: an instance, an array of them, or anything else.
+     * @returns This instance, for chaining.
      */
     public appendChild(name: string, data: any) {
         // noinspection TypeScriptUnresolvedVariable
@@ -1183,7 +1554,15 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Serializes this model instance to JSON
+     * Serializes this instance, honouring the `returning` column list.
+     *
+     * @remarks
+     * Sequelize's own `toJSON()` emits the loaded attributes. This one also picks up
+     * an associated instance, or an array of them, that those attributes do not
+     * already cover, and then — if the last write named the columns to return — drops
+     * every property that was not named.
+     *
+     * @returns A plain object, ready to send over the wire.
      */
     public override toJSON(): any {
         const serialized: any = toJSON.call(this);
@@ -1209,9 +1588,18 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Casts numeric types to numbers for this model if it
-     * was not properly done during query selection and mapping.
-     * This may occurs sometimes when dealing with Views
+     * Casts this instance's numeric columns back to numbers.
+     *
+     * @remarks
+     * Numeric columns selected through a view arrive as strings, so the finders on
+     * this class re-cast them after every select on a view, and this is the method
+     * they use. It is public for the cases they do not cover, a raw query being the
+     * common one.
+     *
+     * Only the columns the model declares are looked at, and the instance is changed
+     * in place.
+     *
+     * @returns This instance, for chaining.
      */
     public fixNumbers(): BaseModel<T> {
         const model = this.sequelize.models[
@@ -1288,11 +1676,20 @@ export abstract class BaseModel<T> extends Model<BaseModel<T>> {
     }
 
     /**
-     * Returns graph representation of the model associations.
-     * This would allow to traverse model association paths and detect
-     * cycles.
+     * Builds a graph of this model's associations, following them transitively.
      *
-     * @param graph
+     * @remarks
+     * Every association becomes an edge, and a many-to-many contributes two: this
+     * model to the through-model, and the through-model to the target. Each target is
+     * then walked in turn, and an association already present as an edge is not
+     * followed again, which is what stops a cycle from recursing forever.
+     *
+     * The reason to have it is to find those cycles before a query does — a cycle in
+     * the graph is a query that can be asked to include itself.
+     *
+     * @param graph - Graph to add to. A fresh one by default, and passing the same
+     *   one is what makes the recursive calls accumulate into a single graph.
+     * @returns The graph, so the outermost call can use it.
      */
     public static toGraph(
         graph = new Graph<typeof BaseModel>(),
