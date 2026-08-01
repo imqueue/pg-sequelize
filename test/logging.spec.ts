@@ -27,7 +27,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { type ILogger } from '@imqueue/rpc';
-import { database } from '../src/index.js';
+import { database, query } from '../src/index.js';
 
 // `database()` caches its Sequelize instance in module state, so the first call in
 // this process is the only one that configures anything — which is exactly why this
@@ -75,5 +75,27 @@ describe('database() logging configuration', () => {
         });
 
         assert.equal(first, second);
+    });
+});
+
+describe('query.sql()', () => {
+    it('refuses template substitutions instead of mangling the statement', () => {
+        const id = 42;
+
+        // `String(templateStringsArray)` joins the literal parts with commas, so
+        // this used to yield `... id = ,` — wrong SQL, silently.
+        assert.throws(
+            () => query.sql`SELECT * FROM t WHERE id = ${id}`,
+            /does not interpolate/,
+        );
+    });
+
+    it('normalises a statement and keeps quoted whitespace', () => {
+        assert.equal(query.sql('SELECT  1   FROM  t'), 'SELECT 1 FROM t;');
+        assert.equal(query.sql`SELECT * FROM t`, 'SELECT * FROM t;');
+        assert.equal(
+            query.sql("SELECT 'a   b'  FROM  t"),
+            "SELECT 'a   b' FROM t;",
+        );
     });
 });

@@ -78,11 +78,16 @@ export namespace query {
     }
 
     /**
-     * Performs safe trimming space characters inside SQL query input string
-     * and inline it.
+     * Collapses whitespace outside quoted literals, so a statement fits on one line.
      *
-     * @param input - input string
-     * @returns sanitized string
+     * @remarks
+     * Walks the string tracking whether a single quote is open, so runs of
+     * whitespace inside a literal are preserved and only structural whitespace is
+     * collapsed. Quote tracking is a simple toggle: it does not understand escaped
+     * or doubled quotes, so a literal containing one can throw the parity off.
+     *
+     * @param input - Statement to normalise.
+     * @returns The statement with structural whitespace collapsed to single spaces.
      */
     export function safeSqlSpaceCleanup(input: string): string {
         let output = '';
@@ -109,28 +114,71 @@ export namespace query {
         return output;
     }
 
-    // tslint:disable-next-line:max-line-length
     /**
-     * SQL tag used to tag sql queries
+     * Normalises a SQL string: one-lined, whitespace collapsed, ending in a single
+     * semicolon.
      *
-     * @param sqlQuery
-     * @param rest - anything else
+     * @remarks
+     * Usable as a plain function or as a template tag, the tag form being there so
+     * an editor highlights the SQL. It does NOT interpolate: a tag carrying
+     * substitutions throws, because the substituted values cannot be reached from
+     * here and the statement would come out mangled: tagging
+     * `SELECT ... WHERE id = ${id}` used to yield `... id = ,`. Bind parameters are
+     * the answer, and they are also the only safe one.
+     *
+     * Whitespace inside single-quoted literals is preserved; only whitespace
+     * outside them is collapsed.
+     *
+     * @param sqlQuery - A complete statement, or a template with no substitutions.
+     * @param values - Template substitutions, which are not supported.
+     * @returns The statement on one line, terminated with exactly one `;`.
+     * @throws TypeError when used as a template tag with substitutions.
+     * @example
+     * ```typescript
+     * const statement = sql`
+     *     SELECT id, name
+     *       FROM "Lead"
+     *      WHERE status = $1
+     * `;
+     * // SELECT id, name FROM "Lead" WHERE status = $1;
+     * await database().query(statement, { bind: [status] });
+     * ```
      */
     export function sql(
         sqlQuery: string | TemplateStringsArray,
-        ..._rest: any[]
+        ...values: any[]
     ): string {
+        // A tagged template hands the literal parts in as an array, and
+        // String() would join them with commas — silently corrupting the
+        // statement rather than failing. Refuse instead: every previous caller
+        // that interpolated was already producing broken SQL.
+        if (values.length && isArray(sqlQuery)) {
+            throw new TypeError(
+                'query.sql() does not interpolate values: the substitutions ' +
+                    'cannot be reached and the statement would be mangled. ' +
+                    'Use bind parameters instead.',
+            );
+        }
+
         return safeSqlSpaceCleanup(String(sqlQuery))
             .replace(RX_SQL_CLEAN, '')
             .replace(RX_SQL_END, ';');
     }
 
     /**
-     * Extracts pure data from given input data for a given model
+     * Keeps only the properties a model actually declares.
      *
-     * @param model
-     * @param input
-     * @param attributes
+     * @remarks
+     * The filter for input arriving from outside: anything the model does not declare
+     * as an attribute is dropped rather than passed to Sequelize, so a caller cannot
+     * set a column by sending an unexpected property. Arrays are mapped element by
+     * element, and relations are dropped along with everything else — this looks at
+     * `rawAttributes` only.
+     *
+     * @param model - Model whose attributes define what survives.
+     * @param input - One object, or an array of them.
+     * @param attributes - Attribute names to allow, defaulting to all the model's.
+     * @returns A new object (or array) carrying only the allowed properties.
      */
     export const pureData: PureDataFunction = <T, _M extends BaseModel<_M>>(
         model: typeof Model,
@@ -155,11 +203,17 @@ export namespace query {
     };
 
     /**
-     * Omits non-related properties from a given fields map object associated
-     * with the given model
+     * Narrows a requested fields map to the model's own columns.
      *
-     * @param model
-     * @param fields
+     * @remarks
+     * Relations and unknown names are dropped, and the primary keys are then added
+     * back whether or not they were asked for — a deliberate trade so domain logic
+     * always has a key to work with, at the cost of returning a column the caller
+     * did not request.
+     *
+     * @param model - Model to narrow against.
+     * @param fields - Requested fields map, or a falsy value for "everything".
+     * @returns The surviving column names, or `true` meaning no restriction.
      */
     export function pureFields(
         model: typeof BaseModel,
@@ -191,11 +245,15 @@ export namespace query {
     }
 
     /**
-     * Returns true if given fields contains associations from given model,
-     * false otherwise
+     * Whether a fields map asks for any of the model's relations.
      *
-     * @param model
-     * @param fields
+     * @remarks
+     * The cheap test for "does this query need joins at all", used to avoid building
+     * an `include` when the caller only wants columns.
+     *
+     * @param model - Model whose associations to check against.
+     * @param fields - Requested fields map.
+     * @returns `true` when at least one key names an association.
      */
     export function needNesting(model: typeof Model, fields: any): boolean {
         if (!fields) {
@@ -213,12 +271,18 @@ export namespace query {
     }
 
     /**
-     * Returns list of filtered attributes from model through a given list of
-     * user requested fields
+     * Intersects a set of attributes with the names a caller asked for.
      *
-     * @param attributes
-     * @param fields
-     * @param model
+     * @remarks
+     * With a `model` given, an empty intersection falls back to that model's primary
+     * keys rather than to nothing — so a fields list that matches no column selects
+     * the keys instead of every column, which is the safer failure but is not what
+     * "no matches" might suggest. Without a `model`, an empty result stays empty.
+     *
+     * @param attributes - Object whose keys are the available names.
+     * @param fields - Names the caller asked for.
+     * @param model - Model to take primary keys from when nothing matched.
+     * @returns The matching names, or the primary keys, or an empty array.
      */
     export function filtered(
         attributes: any,
@@ -237,11 +301,16 @@ export namespace query {
     }
 
     /**
-     * Extracts foreign keys existing on the given model for a given list of
-     * associations and returns as field names list
+     * Foreign-key column names on a model for the given relations.
      *
-     * @param model
-     * @param relations
+     * @remarks
+     * These have to be selected even when the caller did not ask for them, or
+     * Sequelize cannot attach the joined rows — which is why `autoQuery` merges them
+     * into the attribute list.
+     *
+     * @param model - Model holding the foreign keys.
+     * @param relations - Association names to collect keys for.
+     * @returns The foreign-key column names.
      */
     export function foreignKeys(
         model: typeof BaseModel,
@@ -289,11 +358,22 @@ export namespace query {
     }
 
     /**
-     * Makes sure all merge arguments are merged into a given query
+     * Merges query-option fragments into one options object.
      *
-     * @param queryOptions
-     * @param merge
-     * @returns merged query options
+     * @remarks
+     * Per property: an absent property is taken as-is, arrays are unioned with
+     * duplicates dropped, objects are shallow-assigned, and anything else is
+     * overwritten by the later value. A fragment whose property type disagrees with
+     * what is already there — a scalar where an array sits, say — throws rather than
+     * guessing.
+     *
+     * MUTATES and returns `queryOptions`, so pass a fresh object unless sharing is
+     * what you want.
+     *
+     * @param queryOptions - Target, mutated in place.
+     * @param merge - Fragments to merge, in order; falsy ones are skipped.
+     * @returns The same `queryOptions` object.
+     * @throws TypeError when a fragment's property type conflicts with the target's.
      */
     export function mergeQuery(queryOptions: any = {}, ...merge: any[]): any {
         for (const item of merge) {
@@ -343,16 +423,39 @@ export namespace query {
     }
 
     /**
-     * Automatically map query joins and requested attributes from a given
-     * fields map to a given model and returns query find options. Additionally
-     * will merge all given options as the rest arguments.
+     * Builds Sequelize find options from a requested fields map, joins included.
      *
-     * @param model - model to build query for
-     * @param fields - map of the fields requested by a user or a list
-     *                       of fields for a root object (without associations)
-     * @param merge - other query parts to
-     *                                                   merge with
-     * @returns query options type specified by a call
+     * @remarks
+     * The helper the others compose into. It turns a {@link FieldsInput} into
+     * `attributes` plus a nested `include` for every relation the map mentions,
+     * recursing into each level, and adds the foreign keys a join needs whether or
+     * not they were requested. Its rest parameter then merges the fragments the
+     * sibling helpers return — this is the intended shape of a paginated read:
+     *
+     * A value in the map that is not `false` doubles as a filter for that column, so
+     * a fields map can carry a where clause; see {@link FieldsInput} for why presence
+     * rather than value is what selects.
+     *
+     * Two things to know. It MUTATES the `fields` map, adding any column named in a
+     * merged `order` that the map omits, so ordering cannot break selection. And
+     * `fields` may also be a plain array of names, which selects those columns and
+     * builds no joins at all.
+     *
+     * @param model - Model to build the query for.
+     * @param fields - Requested fields map, or an array of column names.
+     * @param merge - Option fragments to merge in, typically from the helpers below.
+     * @returns Find options, typed as the caller asks.
+     * @example
+     * ```typescript
+     * const where = toWhereOptions(withRangeFilters(filter));
+     * const rows = await LeadModel.findAll(autoQuery<FindOptions>(
+     *     LeadModel,
+     *     fields,
+     *     where,
+     *     toLimitOptions(pageOptions),
+     *     toOrderOptions(orderBy),
+     * ));
+     * ```
      */
     export function autoQuery<T>(
         model: any,
@@ -672,11 +775,19 @@ export namespace query {
     }
 
     /**
-     * Builds and returns count query for a given query options and model.
+     * The counting counterpart of {@link query.autoQuery}, for the same fields and filter.
      *
-     * @param model
-     * @param fields
-     * @param merge
+     * @remarks
+     * Builds the same query, then drops `attributes` and counts distinct primary keys
+     * instead — `distinct` matters because the joins `autoQuery` adds would otherwise
+     * multiply a row once per joined record and inflate the total.
+     *
+     * Pass it the same `fields` and filter as the data query, or the two disagree.
+     *
+     * @param model - Model to count rows of.
+     * @param fields - The same fields map used for the data query.
+     * @param merge - The same filter fragments, minus limit and order.
+     * @returns Count options ready for `Model.count()`.
      */
     export function autoCountQuery(
         model: any,
@@ -871,11 +982,36 @@ export namespace query {
     }
 
     /**
-     * Builds toWhereOptions clause query sub-part for a given filter type
+     * Turns a serializable filter into Sequelize `where` options.
      *
-     * @param filter
-     * @param inputType
-     * @returns toWhereOptions clause options
+     * @remarks
+     * Each property is dispatched on its shape: a `$`-prefixed key becomes the
+     * matching Sequelize operator (see {@link FILTER_OPS}), an object with `start`
+     * and `end` becomes a `BETWEEN`, any other object is walked recursively as a
+     * nested filter, an array becomes an OR of its values, and a scalar is compared
+     * directly.
+     *
+     * A STRING value is inspected before it is compared, which is convenient and
+     * occasionally surprising. A `%` anywhere in it makes the comparison a
+     * case-insensitive `ILIKE`, and a leading `<=`, `>=`, `<`, `>` or `=` becomes
+     * that operator with the rest as the value, coerced to a number or a `Date` when
+     * it parses as one. So `'>=10'` and `'%abc%'` work with no operator key — and a
+     * literal value that happens to contain `%`, such as `'50% off'`, becomes a
+     * pattern match rather than an equality test. Use an explicit `$eq` where that
+     * matters.
+     *
+     * Empty is treated as absent, not as a contradiction: an empty array is skipped
+     * and a single-element array is unwrapped to the value. Given a falsy filter it
+     * returns `{}`, which means "no restriction" — so a caller cannot accidentally
+     * filter everything out by passing nothing.
+     *
+     * With `inputType`, a property matching one of that type's own properties is
+     * turned into a required `include` on the related model rather than a column
+     * comparison, which is how a filter reaches across a relation.
+     *
+     * @param filter - Filter from a caller. Modified in place as empties are cleared.
+     * @param inputType - Constructor describing which properties are relations.
+     * @returns Options carrying `where` and, where relations were filtered, `include`.
      */
     export function toWhereOptions<T>(
         filter?: T,
@@ -962,11 +1098,16 @@ export namespace query {
     }
 
     /**
-     * Builds where operations (conditions) from an array of values using
-     * OR operator between given conditions.
+     * ORs an array of filter values into one condition.
      *
-     * @param data
-     * @returns any
+     * @remarks
+     * Plain values are gathered into a single `IN`, while values carrying their own
+     * operator prefix become separate conditions, and the two groups are then ORed —
+     * so `['a', 'b', '>=10']` becomes `IN (a, b) OR >= 10` rather than three
+     * unrelated comparisons.
+     *
+     * @param data - Values to combine.
+     * @returns A `where` fragment for one column.
      */
     export function buildWhereFromArray(data: any[]): any {
         const ops: any[] = [];
@@ -1002,12 +1143,20 @@ export namespace query {
     }
 
     /**
-     * Will apply a range rule on a given filters. The rule is simple. If
-     * filter query contains fields named as [ColumnName]IRange it will try to
-     * convert those fields to a proper range filter if the value is a proper
-     * RangeFilter interface as `{ start: something, end: something }`
-     * If nothing is matched will simply ignores and keep filtering props
-     * as them are.
+     * Rewrites `<column>Range` filter properties onto the columns they belong to.
+     *
+     * @remarks
+     * The convention that lets a range be filtered over RPC: a caller sends
+     * `durationRange: { start, end }` and this moves it to `duration`, where
+     * {@link query.toWhereOptions} turns it into a `BETWEEN`. Recognition is strict — the
+     * property name must end in `Range` and the value must have exactly the keys
+     * `start` and `end`, in either order. Anything else is left untouched and
+     * filtered as an ordinary value, and nested objects are walked so a range on a
+     * related model works too.
+     *
+     * Sending both `duration` and `durationRange` throws rather than choosing one.
+     *
+     * MUTATES and returns the filter it is given.
      *
      * @param filter
      */
