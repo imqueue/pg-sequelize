@@ -18,7 +18,7 @@
     "clean-maps": "find . -name '*.js.map' -not -wholename '*node_modules*' -type f -delete",
     "clean-js": "find . -name '*.js' -not -wholename '*node_modules*' -type f -delete",
     "clean-tests": "rm -rf .nyc_output coverage",
-    "clean": "npm run clean-tests && npm run clean-typedefs && npm run clean-maps && npm run clean-js && npm run clean-doc"
+    "clean": "npm run clean-tests && npm run clean-typedefs && npm run clean-maps && npm run clean-js"
   },
   "repository": {
     "type": "git",
