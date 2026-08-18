@@ -705,6 +705,18 @@ export namespace query {
      * Recursively creates entity and all it's relations from a given input
      * using a given model.
      *
+     * @remarks
+     * Ownership of the transaction is all-or-nothing: the call that opened one
+     * both commits it on success and rolls it back on failure, and every other
+     * call leaves it entirely alone. It used to commit without rolling back, so
+     * a rejected `save()` — a unique or foreign-key violation, a NOT NULL, an
+     * invalid enum — unwound past the commit and left the transaction open. In
+     * sequelize 6 a pooled connection is bound to the `Transaction` and only
+     * `commit()` or `rollback()` returns it, so nothing ever handed it back:
+     * `pool.max` failed inserts (5 by default) exhausted the pool and every
+     * later query failed with `SequelizeConnectionAcquireTimeoutError` until
+     * the process restarted.
+     *
      * @param model - Model to create.
      * @param input - One entity, or several.
      * @param fields - Requested fields map, deciding what comes back.
@@ -729,6 +741,12 @@ export namespace query {
         // the synchronous require(esm) path used by CommonJS consumers
         // cannot evaluate (bindings would stay undefined)
         const { database } = await import('../index.js');
+        // One flag for both ends of the lifecycle, so the commit and the
+        // rollback below cannot select different sets of calls: this call opened
+        // the transaction (`createEntity` passes doCommit=false when the caller
+        // supplied one) and is not a nested relation create (those inherit the
+        // caller's transaction and carry a `parent`).
+        const ownsTransaction = !transaction && !parent && doCommit;
 
         transaction =
             transaction ||
@@ -736,69 +754,83 @@ export namespace query {
                 autocommit: false,
             }));
 
-        // todo: this could be optimized through bulk operations
-        if (isArray(input) && parentProperty && parent) {
-            parent.appendChild(
-                parentProperty,
-                await Promise.all(
-                    (input as I[]).map(inputItem =>
-                        doCreateEntity(
-                            model,
-                            inputItem,
-                            fields,
-                            transaction,
-                            parentProperty,
-                            parent,
-                            true,
-                            doCommit,
+        try {
+            // todo: this could be optimized through bulk operations
+            if (isArray(input) && parentProperty && parent) {
+                parent.appendChild(
+                    parentProperty,
+                    await Promise.all(
+                        (input as I[]).map(inputItem =>
+                            doCreateEntity(
+                                model,
+                                inputItem,
+                                fields,
+                                transaction,
+                                parentProperty,
+                                parent,
+                                true,
+                                doCommit,
+                            ),
                         ),
                     ),
-                ),
+                );
+
+                return parent;
+            }
+
+            if (fields) {
+                primaryKeys(model).forEach(
+                    name => !fields[name] && (fields[name] = false),
+                );
+            }
+
+            const fieldNames = Object.keys(input as any);
+            const relationArgs = prepareInput<T>(
+                input,
+                filtered(model.associations, fieldNames),
+                model,
+                fields,
+                transaction,
+                parent,
+            );
+            const entity = new (model as any)(input as any as ModelAttributes);
+
+            await entity.save({
+                transaction,
+                returning: fields
+                    ? filtered(model.rawAttributes, Object.keys(fields), model)
+                    : true,
+            } as SaveOptions);
+
+            if (!noAppend && parentProperty && parent) {
+                parent.appendChild(parentProperty, entity);
+            }
+
+            await Promise.all(
+                relationArgs.map(async args => {
+                    args.push(entity);
+                    await doCreateEntity(...args);
+                }),
             );
 
-            return parent;
+            if (ownsTransaction) {
+                await transaction.commit();
+            }
+
+            return entity;
+        } catch (err) {
+            if (ownsTransaction) {
+                // swallowed deliberately: a rollback that fails must not
+                // replace the error that caused it, and every path out of
+                // rollback() has dealt with the connection anyway — released on
+                // success, destroyed by forceCleanup() when the ROLLBACK itself
+                // errors, and already gone on the two guard clauses that throw
+                // before touching it
+                await transaction.rollback().catch(() => {});
+            }
+
+            throw err;
         }
-
-        if (fields) {
-            primaryKeys(model).forEach(
-                name => !fields[name] && (fields[name] = false),
-            );
-        }
-
-        const fieldNames = Object.keys(input as any);
-        const relationArgs = prepareInput<T>(
-            input,
-            filtered(model.associations, fieldNames),
-            model,
-            fields,
-            transaction,
-            parent,
-        );
-        const entity = new (model as any)(input as any as ModelAttributes);
-
-        await entity.save({
-            transaction,
-            returning: fields
-                ? filtered(model.rawAttributes, Object.keys(fields), model)
-                : true,
-        } as SaveOptions);
-
-        if (!noAppend && parentProperty && parent) {
-            parent.appendChild(parentProperty, entity);
-        }
-
-        await Promise.all(
-            relationArgs.map(async args => {
-                args.push(entity);
-                await doCreateEntity(...args);
-            }),
-        );
-
-        if (!parent && doCommit) {
-            await transaction.commit();
-        }
-
-        return entity;
     }
 
     /**

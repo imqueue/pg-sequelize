@@ -4,6 +4,39 @@ Notable changes to `@imqueue/pg-sequelize`.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.1] - 2026-08-18
+
+### Fixed
+
+- **`query.createEntity` leaked a pooled connection on every failed insert.**
+  When no transaction was passed it opened one, and finished it only on the happy
+  path — there was no `rollback` anywhere in the helper. A rejected `save()` (a
+  unique or foreign-key violation, a NOT NULL, an invalid enum) unwound past the
+  commit and left the transaction open.
+
+  In sequelize 6 a pooled connection is bound to the `Transaction` and only
+  `commit()` or `rollback()` hands it back, so nothing released it: `pool.max`
+  failed inserts — 5 by default — exhausted the pool, after which every query in
+  the process failed with `SequelizeConnectionAcquireTimeoutError` until it was
+  restarted. On the database side the backend sat in
+  `idle in transaction (aborted)` indefinitely.
+
+  Ownership is now all-or-nothing, decided by a single flag used for both the
+  commit and the rollback so the two cannot select different sets of calls. Only
+  the call that opened the transaction finishes it; a caller-supplied transaction
+  and the nested relation creates that inherit it are untouched, exactly as
+  before. A rollback that fails is swallowed so it cannot replace the error that
+  caused it.
+
+  Anyone who cannot upgrade can own the lifecycle from outside, which closes the
+  leak with no dependency change:
+
+  ```typescript
+  const entity = await Model.sequelize!.transaction(transaction =>
+      createEntity<T, I>(Model, data, fields, transaction),
+  );
+  ```
+
 ## [4.2.0] - 2026-08-01
 
 The package is renamed from `@imqueue/sequelize` to `@imqueue/pg-sequelize`. No
