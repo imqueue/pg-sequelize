@@ -1,6 +1,6 @@
 {
   "name": "@imqueue/pg-sequelize",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "description": "Sequelize/Postgres toolkit for @imqueue microservices — turns a query described as data (filters, paging, ordering, fields) into one efficient statement, plus database views as models and the Postgres index options Sequelize cannot express",
   "keywords": [
     "imqueue",
