@@ -1,6 +1,7 @@
 # @imqueue/pg-sequelize
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/imqueue/pg-sequelize/build.yml)](https://github.com/imqueue/pg-sequelize)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/imqueue/pg-sequelize/build.yml)](https://github.com/imqueue/pg-sequelize/actions/workflows/build.yml)
+[![npm version](https://img.shields.io/npm/v/@imqueue/pg-sequelize)](https://www.npmjs.com/package/@imqueue/pg-sequelize)
 [![Known Vulnerabilities](https://snyk.io/test/github/imqueue/pg-sequelize/badge.svg?targetFile=package.json)](https://snyk.io/test/github/imqueue/pg-sequelize?targetFile=package.json)
 [![License](https://img.shields.io/badge/license-GPL-blue.svg)](https://github.com/imqueue/pg-sequelize/blob/master/LICENSE)
 
@@ -86,7 +87,8 @@ Every exported symbol carries its own documentation, so an editor is the fastest
 reference. The same content is published, symbol by symbol, as the
 [API reference](https://imqueue.org/api/pg-sequelize/latest/) — searchable, and linkable
 when you need to point someone at one thing. The wider ecosystem documentation is at
-[imqueue.org](https://imqueue.org/docs/).
+[imqueue.org](https://imqueue.org/docs/). Current version, licence and Node floor
+for every package: [imqueue.org/status.json](https://imqueue.org/status.json).
 
 ## License
 
