@@ -46,7 +46,7 @@
   "author": "imqueue.com <support@imqueue.com>",
   "license": "GPL-3.0-only",
   "dependencies": {
-    "@imqueue/rpc": "^3.4.1",
+    "@imqueue/rpc": "^3.7.1",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "sequelize": "^6.37.8",
